@@ -3732,14 +3732,10 @@ with tab_copilot:
                     try:
                         api_key_val = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API")
                         if api_key_val:
+                            os.environ["GEMINI_API_KEY"] = api_key_val
                             client = genai.Client(api_key=api_key_val)
                         else:
-                            api_key_val = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API")
-if api_key_val:
-    os.environ["GEMINI_API_KEY"] = api_key_val
-    client = genai.Client(api_key=api_key_val)
-else:
-    client = genai.Client()
+                            client = genai.Client()
                         sys_prompt = "You are the OECD GL 497 Autonomous Multi-Agent Toxicological Council. Answer scientific inquiries on skin sensitization, OpenMM Keap1 molecular dynamics, in vitro defined approaches, and medicinal chemistry bioisosteres."
                         chat_resp = client.models.generate_content(
                             model="gemini-2.5-flash",
