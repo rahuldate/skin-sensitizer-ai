@@ -520,6 +520,7 @@ class ChemistAgent:
                     "is_metal": True,
                     "is_extreme": False,
 
+                }
         if not chem.mol:
             return {"status": "ERROR", "alerts": [], "mechanisms": ["Invalid Molecule"], "is_metal": False, "is_extreme": False}
 
