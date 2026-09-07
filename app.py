@@ -422,6 +422,7 @@ class UniversalChemicalResolver:
                     "smiles": v["smiles"],
                     "is_metal": UniversalChemicalResolver._is_metal_structure(v["smiles"]),
 
+                }
         mol = Chem.MolFromSmiles(query)
         if mol:
             return {
@@ -430,6 +431,7 @@ class UniversalChemicalResolver:
                 "smiles": query,
                 "is_metal": UniversalChemicalResolver._is_metal_structure(query),
 
+            }
         session = requests.Session()
         session.headers.update(UniversalChemicalResolver.HEADERS)
 
