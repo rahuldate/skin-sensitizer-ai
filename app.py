@@ -449,6 +449,7 @@ class UniversalChemicalResolver:
                             "name": name,
                             "smiles": smiles,
                             "is_metal": UniversalChemicalResolver._is_metal_structure(smiles),
+                        }
             except Exception:
                 pass
 
