@@ -541,6 +541,7 @@ class ChemistAgent:
             "is_metal": False,
             "is_extreme": is_extreme,
 
+        }
 
 # =====================================================================
 # AGENT 2: 2D ATOM ATTRIBUTION HEATMAP GENERATOR
