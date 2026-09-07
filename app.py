@@ -1,7 +1,6 @@
 import streamlit as st
 import os
 import google.generativeai as genai
-from google import genai as google_genai
 from google.genai import types
 import matplotlib.pyplot as plt
 import numpy as np
@@ -222,7 +221,6 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 # Optional Gemini SDK import
 try:
-    from google import genai
     from google.genai import types
     HAS_GENAI = True
 except ImportError:
