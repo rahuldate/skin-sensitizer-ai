@@ -465,6 +465,7 @@ class UniversalChemicalResolver:
                         "name": props[0].get("IUPACName", query),
                         "smiles": s,
                         "is_metal": UniversalChemicalResolver._is_metal_structure(s),
+                        }
         except Exception:
             pass
 
