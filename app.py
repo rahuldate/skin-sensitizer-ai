@@ -1,3 +1,15 @@
+
+# =============================================================================
+# MATPLOTLIB FIGURE SAFE FORMAT PATCH
+# =============================================================================
+try:
+    import matplotlib.figure
+    if not hasattr(matplotlib.figure.Figure, 'format'):
+        matplotlib.figure.Figure.format = lambda self, *args, **kwargs: "png"
+except Exception as e:
+    print(f"DEBUG Figure format patch exception: {e}")
+
+
 def render_professional_footer_and_credits():
     """Renders publication-grade regulatory citations, institutional credits, and GLP audit notices."""
     st.markdown("---")
