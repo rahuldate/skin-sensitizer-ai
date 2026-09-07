@@ -2740,28 +2740,7 @@ def render_dashboard_cards(res: dict):
     with col_mol2:
         if res.get("Heatmap_PNG"):
             st.image(res["Heatmap_PNG"], caption="2D Chemical Structure & Atom Attribution", use_container_width=True)
-        
-# =============================================================================
-# AUTO-GENERATE STRUCTURE IMAGE IF MISSING
-# =============================================================================
-try:
-    if 'res' in locals() and isinstance(res, dict):
-        if not res.get("Structure_Image") and not res.get("Heatmap_PNG") and res.get("SMILES"):
-            from rdkit import Chem
-            from rdkit.Chem import Draw
-            import io
-            mol = Chem.MolFromSmiles(res["SMILES"])
-            if mol:
-                img = Draw.MolToImage(mol, size=(300, 300))
-                buffered = io.BytesIO()
-                img.save(buffered, format="PNG")
-                import base64
-                img_str = base64.b64encode(buffered.getvalue()).decode()
-                res["Structure_Image"] = f"data:image/png;base64,{img_str}"
-except Exception:
-    pass
-
-elif res.get("Structure_Image"):
+        elif res.get("Structure_Image"):
             st.image(res["Structure_Image"], caption="2D Chemical Structure", use_container_width=True)
         else:
             st.info("Chemical Structure Preview")
