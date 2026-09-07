@@ -1,5 +1,4 @@
 
-}
 import streamlit as st
 import os
 import google.generativeai as genai
@@ -16,7 +15,6 @@ PRO_HAPTEN_PATTERNS = {
     "Glycol Ether Ester (Hydrolysis to Alkoxyethanol)": "[O;H0]-[C]-[C]-[O;H0]",
     "Autoxidizable Polyene/Diene": "[C]=[C]-[CH2]-[C]=[C]",
     "Pro-hapten Arylamine": "[c][NH2,NHR]"
-}
 
 def evaluate_borderline_conflict(res: dict) -> dict:
     smiles = res.get("SMILES", "")
@@ -47,14 +45,12 @@ def evaluate_borderline_conflict(res: dict) -> dict:
             "title": "Scenario B: Real-World Human Potency / Moderate Exposure Tier",
             "potency": "GHS Category 1B (Moderate Sensitizer) or NC",
             "rationale": "Account for limited dermal penetration, physiological protein dilution, and high clinical NOEL in human patch tests."
-        }
     ]
 
     return {
         "flagged": flagged,
         "reason": f"Potency Threshold Review | Alerts: {', '.join(matched_motifs) if matched_motifs else 'Ensemble Boundary'}",
         "scenarios": scenarios
-    }
 
 
 def run_unified_gemini(agent_role, prompt_content):
@@ -385,12 +381,10 @@ class UniversalChemicalResolver:
         "36653-82-4": {"name": "Cetyl alcohol", "smiles": "CCCCCCCCCCCCCCCCO", "cid": 2682, "exp_ec3": None, "exp_potency": "Non-Sensitizer"},
         "13463-67-7": {"name": "Titanium dioxide", "smiles": "O=[Ti]=O", "cid": 26042, "exp_ec3": None, "exp_potency": "Non-Sensitizer (Insoluble)"},
         "1314-13-2": {"name": "Zinc oxide", "smiles": "O=[Zn]", "cid": 14806, "exp_ec3": None, "exp_potency": "Non-Sensitizer (Insoluble)"},
-    }
 
     HEADERS = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*"
-    }
 
     @staticmethod
     def _is_metal_structure(smiles: str) -> bool:
@@ -412,7 +406,6 @@ class UniversalChemicalResolver:
                 "name": hit["name"],
                 "smiles": hit["smiles"],
                 "is_metal": UniversalChemicalResolver._is_metal_structure(hit["smiles"]),
-            }
 
         for k, v in UniversalChemicalResolver.STATIC_REGISTRY.items():
             if query.lower() == v["name"].lower():
@@ -421,7 +414,6 @@ class UniversalChemicalResolver:
                     "name": v["name"],
                     "smiles": v["smiles"],
                     "is_metal": UniversalChemicalResolver._is_metal_structure(v["smiles"]),
-                }
 
         mol = Chem.MolFromSmiles(query)
         if mol:
@@ -430,7 +422,6 @@ class UniversalChemicalResolver:
                 "name": "User-Defined SMILES Structure",
                 "smiles": query,
                 "is_metal": UniversalChemicalResolver._is_metal_structure(query),
-            }
 
         session = requests.Session()
         session.headers.update(UniversalChemicalResolver.HEADERS)
@@ -449,7 +440,6 @@ class UniversalChemicalResolver:
                             "name": name,
                             "smiles": smiles,
                             "is_metal": UniversalChemicalResolver._is_metal_structure(smiles),
-                        }
             except Exception:
                 pass
 
@@ -465,7 +455,6 @@ class UniversalChemicalResolver:
                         "name": props[0].get("IUPACName", query),
                         "smiles": s,
                         "is_metal": UniversalChemicalResolver._is_metal_structure(s),
-                    }
         except Exception:
             pass
 
@@ -495,14 +484,12 @@ class ChemistAgent:
         "Prohapten_Hydroquinone_Resorcinol": ["c1cc(O)cc(O)c1", "c1cc(O)ccc1O"],
         "Prehapten_Terpene_Diene": ["CC1=CCC(CC1)C(=C)C", "CC(=CCCC(C)(C=C)O)C", "CC(=CCCC(=CCO)C)C"],
         "Thiol_Mercaptobenzothiazole": ["[#16]=[#6]1[#7][#6]2[#6][#6][#6][#6][#6]2[#16]1"]
-    }
 
     METALLIC_SENSITIZERS = {
         "[Ni": "Nickel Chelation (TLR4 Activation)",
         "[Co": "Cobalt Contact Chelation",
         "[Cr": "Chromate/Chromium Hapten Complexation",
         "[Pd": "Palladium Cross-Reactivity",
-    }
 
     def __init__(self):
         self.compiled_smarts = {}
@@ -518,7 +505,6 @@ class ChemistAgent:
                     "mechanisms": ["Metal Chelation", "TLR4 Direct Receptor Crosslinking"],
                     "is_metal": True,
                     "is_extreme": False,
-                }
 
         if not chem.mol:
             return {"status": "ERROR", "alerts": [], "mechanisms": ["Invalid Molecule"], "is_metal": False, "is_extreme": False}
@@ -539,7 +525,6 @@ class ChemistAgent:
             "mechanisms": mechanisms,
             "is_metal": False,
             "is_extreme": is_extreme,
-        }
 
 
 # =====================================================================
@@ -593,7 +578,6 @@ class MolecularDynamicsAgent:
                 "complex_stability": "Unbound",
                 "binding_mode": "None",
                 "hbond_occupancy": "0%"
-            }
 
         mw = chem.mw
         logp = chem.log_p
@@ -624,7 +608,6 @@ class MolecularDynamicsAgent:
             "complex_stability": stability,
             "binding_mode": mode,
             "hbond_occupancy": f"{hbond_occ}%"
-        }
 
 
 # =====================================================================
@@ -658,7 +641,6 @@ class ChemBERTaTransformerAgent:
             "transformer_score": transformer_score,
             "token_count": len(tokens),
             "transformer_verdict": "TRANSFORMER_SENSITIZER" if transformer_score >= 0.50 else "TRANSFORMER_NON_SENSITIZER"
-        }
 
 
 # =====================================================================
@@ -671,7 +653,6 @@ class SkinMetabolismAgent:
         "Aromatic_Hydroxylation": "[c:1][H:2]>>[c:1]O",
         "Aliphatic_Hydroxylation": "[C;H3,H2:1][C,H:2]>>[C:1](O)[C,H:2]",
         "Thioether_Sulfoxidation": "[C:1][S:2][C:3]>>[C:1][S:2](=O)[C:3]",
-    }
 
     @staticmethod
     def simulate_metabolism(chem: ChemicalProfile, max_metabolites: int = 3) -> Dict[str, Any]:
@@ -715,7 +696,6 @@ class SkinMetabolismAgent:
             "has_bioactivation": has_reactive_metabolite,
             "metabolites": metabolites,
             "metabolic_risk": risk_label
-        }
 
 
 # =====================================================================
@@ -765,7 +745,6 @@ class GraphNeuralNetworkAgent:
             "gnn_score": gnn_prob,
             "conformal_p_value": p_val,
             "gnn_verdict": verdict
-        }
 
 
 # =====================================================================
@@ -802,7 +781,6 @@ class ToxicologistAgent:
             "pathway": pathway,
             "is_metal": is_metal,
             "is_extreme": is_extreme,
-        }
 
 
 # =====================================================================
@@ -828,7 +806,6 @@ class ClinicalHRIPTAgent:
             "hript_call": call,
             "hript_confidence": conf,
             "hript_probability": hript_prob
-        }
 
 
 # =====================================================================
@@ -847,7 +824,6 @@ class SARAICEPotencyAgent:
                 "potency_class": "Non-Sensitizer",
                 "nesil_ug_cm2": "N/A",
                 "dst_category": "Exempt"
-            }
 
         log_kp = -2.7 + (0.71 * chem.log_p) - (0.0061 * chem.mw)
         kp_cm_h = (10 ** log_kp) * 3600
@@ -863,7 +839,6 @@ class SARAICEPotencyAgent:
                 "potency_class": "Non-Sensitizer",
                 "nesil_ug_cm2": "No Limit (Safe)",
                 "dst_category": "Exempt / Non-reactive"
-            }
 
         log_ed01 = max(0.1, 3.85 - (2.1 * stat_score) - (0.15 * chem.log_p))
         sara_ed01 = round(10 ** log_ed01, 1)
@@ -893,7 +868,6 @@ class SARAICEPotencyAgent:
             "potency_class": potency,
             "nesil_ug_cm2": f"{nesil} µg/cm²",
             "dst_category": dst
-        }
 
 
 # =====================================================================
@@ -979,7 +953,6 @@ class DefinedApproachAgent:
             "its_call": its_call,
             "ke31_call": ke31_call,
             "ke31_path": ke31_path,
-        }
 
 
 # =====================================================================
@@ -1038,7 +1011,6 @@ class CompanionNAMsAgent:
                 "respiratory_call": "N/A",
                 "skin_irritation_call": "N/A",
                 "eye_irritation_call": "N/A",
-            }
 
         has_photo_chromophore = (Descriptors.NumAromaticRings(chem.mol) >= 2) or ("c1ccc2c(c1)ccc3ccccc23" in chem.smiles) or ("O=C1OC2=" in chem.smiles)
         photo_call = "Potential Phototoxic" if has_photo_chromophore and chem.log_p > 1.5 else "Non-Phototoxic"
@@ -1055,7 +1027,6 @@ class CompanionNAMsAgent:
             "respiratory_call": resp_call,
             "skin_irritation_call": skin_irr,
             "eye_irritation_call": eye_irr,
-        }
 
 
 # =====================================================================
@@ -1073,7 +1044,6 @@ class StatisticianAgent:
             "call": "SENSITIZER" if final_score >= 0.50 else "NON_SENSITIZER",
             "applicability_domain": ad_call,
             "confidence": conf,
-        }
 
 
 class RegulatoryAgent:
@@ -1093,7 +1063,6 @@ class RegulatoryAgent:
         return {
             "ghs_classification": ghs,
             "recommended_action": rec,
-        }
 
 
 class QAAgent:
@@ -1131,7 +1100,6 @@ class AutonomousGeminiCouncil:
                 "toxicologist_narrative": f"AOP Weight of Evidence concordant with {res.get('OECD_497_Call', 'SENSITIZER')}.",
                 "regulatory_woe": f"OECD GL 497 compliance confirmed: {res.get('GHS_Category', 'Category 1A')}.",
                 "bioisostere_recommendation": "Bioisostere optimization active."
-            }
 
         prompt = f"""
 You are the Autonomous Multi-Agent Toxicology Council for Skin Sensitization (OECD GL 497).
@@ -1170,7 +1138,6 @@ IMPORTANT: Return ONLY a raw JSON object with keys: chemist_narrative, toxicolog
                 "toxicologist_narrative": data.get("toxicologist_narrative", ""),
                 "regulatory_woe": data.get("regulatory_woe", ""),
                 "bioisostere_recommendation": data.get("bioisostere_recommendation", "")
-            }
         except Exception as e:
             print(f"DEBUG - Council LLM Exception: {e}")
             return {
@@ -1178,7 +1145,6 @@ IMPORTANT: Return ONLY a raw JSON object with keys: chemist_narrative, toxicolog
                 "toxicologist_narrative": f"AOP Weight of Evidence concordant with {res.get('OECD_497_Call', 'SENSITIZER')}.",
                 "regulatory_woe": f"OECD GL 497 compliance confirmed: {res.get('GHS_Category', 'Category 1A')}.",
                 "bioisostere_recommendation": "Bioisostere optimization active."
-            }
 
 
 # =====================================================================
@@ -1193,7 +1159,6 @@ PRO_HAPTEN_PATTERNS = {
     "Glycol Ether Ester (Hydrolysis to Alkoxyethanol)": "[O;H0]-[C]-[C]-[O;H0]",
     "Autoxidizable Polyene/Diene": "[C]=[C]-[CH2]-[C]=[C]",
     "Pro-hapten Arylamine": "[c][NH2,NHR]"
-}
 
 def evaluate_borderline_conflict(res: dict) -> dict:
     smiles = res.get("SMILES", "")
@@ -1224,14 +1189,12 @@ def evaluate_borderline_conflict(res: dict) -> dict:
             "title": "Scenario B: Real-World Human Potency / Moderate Exposure Tier",
             "potency": "GHS Category 1B (Moderate Sensitizer) or NC",
             "rationale": "Account for limited dermal penetration, physiological protein dilution, and high clinical NOEL in human patch tests."
-        }
     ]
 
     return {
         "flagged": flagged,
         "reason": f"Potency Threshold Review | Alerts: {', '.join(matched_motifs) if matched_motifs else 'Ensemble Boundary'}",
         "scenarios": scenarios
-    }
 
 def render_hitl_panel(res: dict):
     clean_target_name = str(res.get("Resolved_Name", res.get("Input", "Compound"))).replace(" ", "_").replace("/", "_")
@@ -1669,7 +1632,6 @@ def evaluate_pro_pre_hapten_activation(mol) -> dict:
         "Category": category,
         "Risk_Level": risk_level,
         "Alerts": detected if detected else ["No autoxidation or metabolic bioactivation alerts detected."],
-    }
 
 def calculate_finite_dose_dermal_flux(mw: float, logp: float) -> dict:
     """
@@ -1701,7 +1663,6 @@ def calculate_finite_dose_dermal_flux(mw: float, logp: float) -> dict:
             "Kp_cm_hr": f"{kp_cm_hr:.4e}",
             "J_max_ug_cm2_hr": round(j_max, 2),
             "Flux_Tier": flux_tier
-        }
     except Exception:
         return {"Kp_cm_hr": "N/A", "J_max_ug_cm2_hr": "N/A", "Flux_Tier": "Unknown"}
 
@@ -1883,7 +1844,6 @@ def process_single_chemical(
             "Analogs": [],
             "Heatmap_PNG": None,
             "LLM_Council": {}
-        }
 
     chem = ChemicalProfile(
         query_term=identifier,
@@ -1999,7 +1959,6 @@ def process_single_chemical(
         "Audit_ID": b_qa["audit_id"],
         "Analogs": analogs,
         "Heatmap_PNG": heatmap_bytes
-    }
 
     render_hitl_panel(res_dict)
 
@@ -2077,7 +2036,6 @@ OECD_REFERENCE_STANDARDS = [
         "Name": "Resorcinol", "CAS": "108-46-3",
         "SMILES": "C1=CC(=CC(=C1)O)O",
         "LLNA_EC3": "5.5%", "GHS": "Category 1B (Moderate)", "DPRA": "41.5%", "KeratinoSens": "Positive (EC1.5: 38.0 uM)", "hCLAT": "Positive (CV75: 75.0 ug/mL)", "Mechanism": "Pro-hapten (Quinoid Oxidation)"
-    }
 ]
 
 def find_top_read_across_analogues(target_smiles: str, top_k: int = 5) -> List[Dict[str, Any]]:
@@ -2285,7 +2243,6 @@ CUTANEOUS_BIOACTIVATION_RULES = [
         "smarts": "C=C-[CX3](=[OX1])",
         "mechanism": "Direct nucleophilic addition by protein Cys-151 thiol without metabolic requirement",
         "regulatory_note": "Intrinsic electrophile: Positive in DPRA (OECD 442C) direct peptide assay."
-    }
 ]
 
 def classify_cutaneous_bioactivation(smiles: str) -> Dict[str, Any]:
@@ -2312,7 +2269,6 @@ def classify_cutaneous_bioactivation(smiles: str) -> Dict[str, Any]:
     return {
         "primary_class": prim_class,
         "flags": matched_flags
-    }
 
 
 # =====================================================================
@@ -2369,7 +2325,6 @@ def generate_glp_digital_signature(res: Dict[str, Any]) -> Dict[str, str]:
         "SHA256": sha256_hash,
         "Timestamp_UTC": timestamp_utc,
         "Audit_Record_ID": f"GLP-AOP-{sha256_hash[:12].upper()}"
-    }
 
 
 
@@ -2391,7 +2346,6 @@ def calculate_ngra_mos(
         "Rinse-off Shower Gel": {"daily_amount_mg": 18670.0, "retention_factor": 0.01, "surface_area_cm2": 17500.0},
         "Rinse-off Shampoo": {"daily_amount_mg": 10460.0, "retention_factor": 0.01, "surface_area_cm2": 1440.0},
         "Fine Fragrance (Eau de Parfum)": {"daily_amount_mg": 750.0, "retention_factor": 1.0, "surface_area_cm2": 50.0},
-    }
     spec = product_defaults.get(product_type, product_defaults["Leave-on Face Cream"])
     
     # 1. Calculate External Exposure Dose (mg/day)
@@ -2425,7 +2379,6 @@ def calculate_ngra_mos(
         "Margin_of_Safety_MoS": round(sens_mos, 1),
         "Safety_Status": status_label,
         "Is_Safe": is_safe
-    }
 
 
 # =====================================================================
@@ -2503,7 +2456,6 @@ def evaluate_oecd497_decision_trees(res: Dict[str, Any]) -> Dict[str, Any]:
         "ITS_Total_Points": total_its_points,
         "ITS_Point_Breakdown": f"h-CLAT ({hclat_score} pts) + DPRA ({dpra_score} pts) + In Silico ({insilico_score} pt)",
         "ITS_Potency_Call": its_potency
-    }
 
 
 
@@ -2635,7 +2587,6 @@ class BayesianWoEEngine:
         "KE2_KeratinoSens": {"sens": 0.79, "spec": 0.72}, # OECD TG 442D
         "KE3_hCLAT": {"sens": 0.85, "spec": 0.68},        # OECD TG 442E
         "InSilico_GNN": {"sens": 0.91, "spec": 0.88}      # QSAR / ChemBERTa
-    }
 
     @classmethod
     def compute_posterior(cls, res: Dict[str, Any]) -> Dict[str, Any]:
@@ -2709,7 +2660,6 @@ class BayesianWoEEngine:
             "CI_95_Range": f"[{ci_lower:.3f}, {ci_upper:.3f}]",
             "WoE_Classification": woe_tier,
             "Sequential_Updates": updates
-        }
 
 
 def render_dashboard_cards(res: dict):
@@ -3480,10 +3430,8 @@ with tab_sketch:
         <script type="text/javascript">
             function jsmeOnLoad() {
                 jsmeApplet = new JSApplet.JSME("jsme_container", "100%", "360px", {"options": "query,hydrogens,markAtom,atomHelp"});
-            }
             function exportSmiles() {
                 document.getElementById("smiles_output").value = jsmeApplet.smiles();
-            }
         </script>
             body { font-family: sans-serif; margin: 0; padding: 5px; }
             button { background-color: #ff4b4b; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 8px; }
