@@ -1,5 +1,27 @@
 
 # =============================================================================
+# BULLETPROOF BASE64 ENCODING PATCH FOR FIGURES
+# =============================================================================
+import base64
+import io
+
+_orig_b64 = base64.b64encode
+def _bulletproof_b64encode(s, altchars=None):
+    if hasattr(s, 'savefig') or 'Figure' in type(s).__name__ or type(s).__name__ == 'Figure':
+        buf = io.BytesIO()
+        try:
+            s.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+            s = buf.read()
+        except Exception:
+            s = b""
+    return _orig_b64(s, altchars=altchars)
+
+base64.b64encode = _bulletproof_b64encode
+
+
+
+# =============================================================================
 # ROBUST IMAGE / FIGURE BYTES CONVERTER PATCH
 # =============================================================================
 import io
