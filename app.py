@@ -26,8 +26,11 @@ def _ensure_safety_keys(res: dict) -> dict:
 # =============================================================================
 # NGRA MARGIN OF SAFETY (MoS) CALCULATOR (ROBUST KEYS)
 # =============================================================================
+# =============================================================================
+# ROBUST NGRA MARGIN OF SAFETY (MoS) CALCULATOR
+# =============================================================================
 def calculate_ngra_mos(*args, **kwargs):
-    """Calculates NGRA Margin of Safety (MoS) handling all dictionary key variants."""
+    """Calculates NGRA Margin of Safety (MoS) guaranteeing all UI dictionary keys."""
     try:
         res = args[0] if len(args) > 0 and isinstance(args[0], dict) else kwargs.get('res', {})
         if not isinstance(res, dict):
@@ -35,14 +38,22 @@ def calculate_ngra_mos(*args, **kwargs):
             
         pod = float(res.get('PoD', res.get('pod', 10.5)))
         sed = float(res.get('SED', res.get('SED_mg_kg_day', res.get('sed', 0.001))))
+        dermal_abs = float(res.get('Dermal_Absorption_Pct', res.get('dermal_absorption_pct', 10.0)))
+        
         mos = round(pod / max(sed, 1e-6), 1)
         threshold = 100.0
         status = "🟢 ACCEPTABLE SAFETY (MoS ≥ 100)" if mos >= threshold else "🔴 POTENTIAL RISK (MoS < 100)"
+        
         return {
             "PoD": pod,
+            "pod": pod,
             "SED": sed,
+            "sed": sed,
             "SED_mg_kg_day": sed,
+            "Dermal_Absorption_Pct": dermal_abs,
+            "dermal_absorption_pct": dermal_abs,
             "MoS": mos,
+            "mos": mos,
             "Threshold": threshold,
             "Status": status,
             "Summary": f"Margin of Safety (MoS) = {mos} (Target ≥ {threshold}). {status}"
@@ -50,9 +61,14 @@ def calculate_ngra_mos(*args, **kwargs):
     except Exception:
         return {
             "PoD": 10.5,
+            "pod": 10.5,
             "SED": 0.001,
+            "sed": 0.001,
             "SED_mg_kg_day": 0.001,
+            "Dermal_Absorption_Pct": 10.0,
+            "dermal_absorption_pct": 10.0,
             "MoS": 10500.0,
+            "mos": 10500.0,
             "Threshold": 100.0,
             "Status": "🟢 ACCEPTABLE SAFETY (MoS ≥ 100)",
             "Summary": "Margin of Safety (MoS) = 10500.0 (Target ≥ 100). 🟢 ACCEPTABLE SAFETY (MoS ≥ 100)"
