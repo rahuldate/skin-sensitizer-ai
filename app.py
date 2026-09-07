@@ -502,6 +502,8 @@ class ChemistAgent:
         "[Cr": "Chromate/Chromium Hapten Complexation",
         "[Pd": "Palladium Cross-Reactivity",
 
+    }
+
     def __init__(self):
         self.compiled_smarts = {}
         for k, pats in self.OECD_SMARTS.items():
