@@ -3730,13 +3730,14 @@ with tab_copilot:
             with st.chat_message("assistant"):
                 with st.spinner("Council is deliberating..."):
                     try:
-    api_key_val = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API")
-    if api_key_val:
-        client = genai.Client(api_key=api_key_val)
-    else:
-        client = genai.Client(                        sys_prompt = "You are the OECD GL 497 Autonomous Multi-Agent Toxicological Council. Answer scientific inquiries on skin sensitization, OpenMM Keap1 molecular dynamics, in vitro defined approaches, and medicinal chemistry bioisosteres."
+                        api_key_val = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API")
+                        if api_key_val:
+                            client = genai.Client(api_key=api_key_val)
+                        else:
+                            client = genai.Client()
+                        sys_prompt = "You are the OECD GL 497 Autonomous Multi-Agent Toxicological Council. Answer scientific inquiries on skin sensitization, OpenMM Keap1 molecular dynamics, in vitro defined approaches, and medicinal chemistry bioisosteres."
                         chat_resp = client.models.generate_content(
-                            model="gemini-3.5-flash-lite",
+                            model="gemini-2.5-flash",
                             contents=user_query,
                             config=types.GenerateContentConfig(
                                 system_instruction=sys_prompt,
