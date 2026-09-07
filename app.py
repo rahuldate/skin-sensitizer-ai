@@ -2726,7 +2726,7 @@ def render_dashboard_cards(res: dict):
     # SECTION 1: ANALYZED MOLECULE & APPLICABILITY DOMAIN
     # =========================================================================
     st.markdown("### 🔬 1. Analyzed Molecule & Applicability Domain")
-    col_mol1, col_mol2, col_mol3 = st.columns([2.8, 2, 2.8])
+    col_mol1, col_mol2, col_mol3 = st.columns([2.2, 4.0, 2.2])
     with col_mol1:
         st.markdown(f"**Compound Name:** `{res.get('Resolved_Name', 'Unknown')}`")
         st.markdown(f"**CAS RN / Input Identifier:** `{res.get('Input', 'N/A')}`")
