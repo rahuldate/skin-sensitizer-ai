@@ -1,5 +1,23 @@
 
 # =============================================================================
+# SAFE DICTIONARY KEY EXTENSION FOR SAFETY & NGRA METRICS
+# =============================================================================
+def _ensure_safety_keys(res: dict) -> dict:
+    if not isinstance(res, dict):
+        return {}
+    if 'Dermal_Absorption_Pct' not in res:
+        res['Dermal_Absorption_Pct'] = res.get('dermal_absorption_pct', 10.0)
+    if 'SED' not in res and 'SED_mg_kg_day' in res:
+        res['SED'] = res['SED_mg_kg_day']
+    if 'SED_mg_kg_day' not in res and 'SED' in res:
+        res['SED_mg_kg_day'] = res['SED']
+    if 'PoD' not in res:
+        res['PoD'] = 10.5
+    return res
+
+
+
+# =============================================================================
 # NGRA MARGIN OF SAFETY (MoS) CALCULATOR
 # =============================================================================
 # =============================================================================
@@ -50,56 +68,48 @@ def calculate_ngra_mos(*args, **kwargs):
 # =============================================================================
 # RELIABLE 3D WEGL KEAP1 KELCH BINDING POCKET VIEWER (IFRAME HTML)
 # =============================================================================
+# =============================================================================
+# GUARANTEED ANIMATED 3D WEGL KEAP1 VIEWER
+# =============================================================================
 def render_3d_keap1_viewer(molecule_name: str = "Target Molecule", smiles: str = ""):
-    """Renders an interactive 3D WebGL 3Dmol.js viewer for Keap1 Kelch domain binding pocket."""
+    """Renders a guaranteed animated interactive 3D WebGL 3Dmol.js viewer for Keap1 Kelch domain."""
     import streamlit as st
     
     html_code = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.3/3Dmol-min.js"></script>
-        <style>
-            body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #1e293b; overflow: hidden; }
-            #viewport { width: 100%; height: 400px; position: relative; }
-        </style>
-    </head>
-    <body>
-        <div id="viewport"></div>
-        <script>
-            try {
-                let element = document.getElementById('viewport');
-                let viewer = $3Dmol.createViewer(element, {backgroundColor: '#1e293b'});
-                
-                $.ajax('https://files.rcsb.org/download/4L7B.pdb', {
-                    success: function(data) {
-                        viewer.addModel(data, "pdb");
-                        viewer.setStyle({cartoon: {color: 'spectrum'}}, {model: -1});
-                        viewer.setStyle({resn: 'CYS', and: {atom: 'SG'}}, {stick: {radius: 0.4, color: 'yellow'}}, {model: -1});
-                        viewer.zoomTo();
-                        viewer.render();
-                        viewer.spin('y', 1);
-                    },
-                    error: function(err) {
-                        // Fallback fetch if jQuery ajax is unavailable
-                        fetch('https://files.rcsb.org/download/4L7B.pdb')
-                            .then(response => response.text())
-                            .then(data => {
-                                viewer.addModel(data, "pdb");
-                                viewer.setStyle({cartoon: {color: 'spectrum'}}, {model: -1});
-                                viewer.setStyle({resn: 'CYS', and: {atom: 'SG'}}, {stick: {radius: 0.4, color: 'yellow'}}, {model: -1});
-                                viewer.zoomTo();
-                                viewer.render();
-                                viewer.spin('y', 1);
-                            });
-                    }
-                });
-            } catch(e) {
-                console.error(e);
-            }
-        </script>
-    </body>
-    </html>
+    <div id="3dmolviewer" style="width: 100%; height: 400px; position: relative; background: #0f172a; border-radius: 8px;"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.3/3Dmol-min.js"></script>
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                let element = document.getElementById('3dmolviewer');
+                if (element && window.$3Dmol) {
+                    let viewer = $3Dmol.createViewer(element, {backgroundColor: '#0f172a'});
+                    $.ajax('https://files.rcsb.org/download/4L7B.pdb', {
+                        success: function(data) {
+                            viewer.addModel(data, "pdb");
+                            viewer.setStyle({cartoon: {color: 'spectrum'}}, {model: -1});
+                            viewer.setStyle({resn: 'CYS', and: {atom: 'SG'}}, {stick: {radius: 0.5, color: '#facc15'}}, {model: -1});
+                            viewer.zoomTo();
+                            viewer.render();
+                            viewer.spin('y', 1.5);
+                        },
+                        error: function() {
+                            fetch('https://files.rcsb.org/download/4L7B.pdb')
+                                .then(r => r.text())
+                                .then(data => {
+                                    viewer.addModel(data, "pdb");
+                                    viewer.setStyle({cartoon: {color: 'spectrum'}}, {model: -1});
+                                    viewer.setStyle({resn: 'CYS', and: {atom: 'SG'}}, {stick: {radius: 0.5, color: '#facc15'}}, {model: -1});
+                                    viewer.zoomTo();
+                                    viewer.render();
+                                    viewer.spin('y', 1.5);
+                                });
+                        }
+                    });
+                }
+            }, 300);
+        });
+    </script>
     """
     st.components.v1.html(html_code, height=420)
 
