@@ -53,6 +53,7 @@ def evaluate_borderline_conflict(res: dict) -> dict:
         "flagged": flagged,
         "reason": f"Potency Threshold Review | Alerts: {', '.join(matched_motifs) if matched_motifs else 'Ensemble Boundary'}",
         "scenarios": scenarios
+    }
 
 
 def run_unified_gemini(agent_role, prompt_content):
@@ -1198,6 +1199,7 @@ def evaluate_borderline_conflict(res: dict) -> dict:
         "flagged": flagged,
         "reason": f"Potency Threshold Review | Alerts: {', '.join(matched_motifs) if matched_motifs else 'Ensemble Boundary'}",
         "scenarios": scenarios
+    }
 
 def render_hitl_panel(res: dict):
     clean_target_name = str(res.get("Resolved_Name", res.get("Input", "Compound"))).replace(" ", "_").replace("/", "_")
