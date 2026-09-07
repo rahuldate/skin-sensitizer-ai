@@ -126,3 +126,33 @@ if __name__ == "__main__":
         st.error(f"Critical Application Error: {_top_e}")
         import traceback
         st.code(traceback.format_exc())
+
+
+
+# =============================================================================
+# STREAMLIT MAIN EXECUTION ENTRYPOINT
+# =============================================================================
+def main():
+    import streamlit as st
+    st.title("🧪 Skin Sensitization AI & NGRA Dashboard")
+    st.markdown("### Executive Dossier & Bayesian Weight-of-Evidence Synthesis")
+    
+    # Test data rendering
+    try:
+        bayes_res = BayesianWoEEngine.compute_posterior({})
+        st.success("Bayesian WoE Engine Loaded Successfully!")
+        st.json(bayes_res)
+    except Exception as e:
+        st.error(f"Error in Bayesian WoE Engine: {e}")
+
+if __name__ == "__main__":
+    main()
+else:
+    # If imported by streamlit run app.py
+    try:
+        import streamlit as st
+        if not getattr(st, '_is_running_main', False):
+            st._is_running_main = True
+            main()
+    except Exception:
+        pass
