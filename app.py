@@ -1,3 +1,10 @@
+
+<style>
+/* Ensure high contrast and visible white text inside QPRF report boxes and containers */
+div[data-testid="stMarkdownContainer"] div, .qprf-box, pre, code {
+    color: #FFFFFF !important;
+}
+</style>
 import streamlit as st
 import os
 import google.generativeai as genai
