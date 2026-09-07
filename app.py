@@ -2763,7 +2763,7 @@ def render_dashboard_cards(res: dict):
         st.markdown(f"**Keap1 $\\Delta G_{{MM/PBSA}}$:** `{res.get('MD_MMPBSA_DeltaG', '-7.4 kcal/mol')}` ({res.get('MD_Stability', 'Stable Covalent Adduct')})")
     with col_mol2:
         if res.get("Heatmap_PNG"):
-            st.image(res["Heatmap_PNG"], caption="2D Chemical Structure & Atom Attribution", use_container_width=True)
+            st.image(res["Heatmap_PNG"], caption="2D Chemical Structure & Atom Attribution", width='stretch')
         # Render 2D Chemical Structure
         s_smi = res.get("SMILES", "")
         img_bytes = res.get("Structure_Image")
@@ -2772,14 +2772,14 @@ def render_dashboard_cards(res: dict):
             res["Structure_Image"] = img_bytes
             
         if img_bytes:
-            st.image(img_bytes, caption=f"2D Structure: {res.get('Resolved_Name', 'Target Chemical')}", use_container_width=True)
+            st.image(img_bytes, caption=f"2D Structure: {res.get('Resolved_Name', 'Target Chemical')}", width='stretch')
         else:
             st.info("Chemical Structure Preview unavailable.")
     with col_mol3:
         gnn_score_val = float(res.get("GNN_Score", 0.5))
         pca_plot_bytes = generate_chemical_space_pca_plot(res.get("SMILES", ""), res)
         res["PCA_Chemical_Space_Plot"] = pca_plot_bytes
-        st.image(pca_plot_bytes, caption="Chemical Space PCA & 95% AD Boundary", use_container_width=True)
+        st.image(pca_plot_bytes, caption="Chemical Space PCA & 95% AD Boundary", width='stretch')
 
     st.markdown("---")
 
@@ -2992,7 +2992,7 @@ def render_dashboard_cards(res: dict):
 
         md_plot_bytes = generate_keap1_interaction_plot(raw_rmsd, raw_dg)
         res["Keap1_Interaction_Plot"] = md_plot_bytes
-        st.image(md_plot_bytes, caption="Backbone RMSD Convergence & Pocket Contact Energetics (ΔG)", use_container_width=True)
+        st.image(md_plot_bytes, caption="Backbone RMSD Convergence & Pocket Contact Energetics (ΔG)", width='stretch')
 
     with col_v3d:
         st.markdown("##### 🌐 Interactive 3D WebGL Keap1 Kelch Binding Pocket")
@@ -3232,7 +3232,7 @@ def render_dashboard_cards(res: dict):
                 "DPRA Depletion": a["DPRA"],
                 "Primary Reaction Mechanism": a["Mechanism"]
             })
-        st.dataframe(pd.DataFrame(ana_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(ana_rows), width='stretch', hide_index=True)
 
     # Expert HITL Adjudication Panel
     render_hitl_panel(res)
@@ -3283,7 +3283,7 @@ if app_mode == '🔬 Single compound & QPRF':
         )
     with col_in2:
         st.markdown('<div style="height: 28px;"></div>', unsafe_allow_html=True)
-        run_btn = st.button('🚀 Run Assessment', type='primary', use_container_width=True)
+        run_btn = st.button('🚀 Run Assessment', type='primary', width='stretch')
 
     if user_query:
         active_key = api_key_input if 'api_key_input' in locals() and api_key_input else ''
@@ -3328,7 +3328,7 @@ elif app_mode == '🧪 DASS Lab Data Batch (.xlsx / .csv / .txt)':
                 df_in = pd.read_csv(uploaded_file)
             
             st.markdown('##### 📋 Uploaded Laboratory Dataset')
-            st.dataframe(df_in, use_container_width=True)
+            st.dataframe(df_in, width='stretch')
             
             if st.button('🚀 Process OECD 497 Batch & Compute ITS Scores', type='primary'):
                 results = []
@@ -3367,7 +3367,7 @@ elif app_mode == '🧪 DASS Lab Data Batch (.xlsx / .csv / .txt)':
                 
                 df_res = pd.DataFrame(results)
                 st.markdown('##### 📊 OECD Defined Approach Classification Results')
-                st.dataframe(df_res, use_container_width=True)
+                st.dataframe(df_res, width='stretch')
                 
                 st.download_button(
                     label='📥 Export DASS Batch Results (.csv)',
@@ -3420,7 +3420,7 @@ elif app_mode == '📁 Standard Screening Batch':
         try:
             df_screen = pd.read_csv(batch_file)
             st.markdown('##### 📋 Uploaded Compound List')
-            st.dataframe(df_screen, use_container_width=True)
+            st.dataframe(df_screen, width='stretch')
             
             col_target = st.selectbox('Select Column Containing Chemical Names, CAS, or SMILES:', options=df_screen.columns)
             
@@ -3448,7 +3448,7 @@ elif app_mode == '📁 Standard Screening Batch':
                 
                 df_out = pd.DataFrame(screen_results)
                 st.markdown('##### 📊 Screening Results Summary')
-                st.dataframe(df_out, use_container_width=True)
+                st.dataframe(df_out, width='stretch')
                 
                 st.download_button(
                     label='📥 Export Batch Screening CSV',
@@ -3574,7 +3574,7 @@ elif app_mode == '🌿 UVCB Extract Deconvolution':
     df_comp = pd.DataFrame(comp_list)
     
     st.markdown('##### 🌿 Major Chemical Constituents')
-    st.dataframe(df_comp[['Name', 'CAS', 'Pct', 'Role']], use_container_width=True)
+    st.dataframe(df_comp[['Name', 'CAS', 'Pct', 'Role']], width='stretch')
     
     if st.button('🚀 Deconvolve & Run Aggregate Sensitization Risk Profile', type='primary'):
         with st.spinner('Deconvolving mixture & computing constituent bioactivation profiles...'):
