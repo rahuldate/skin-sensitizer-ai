@@ -495,6 +495,7 @@ class ChemistAgent:
         "Prohapten_Hydroquinone_Resorcinol": ["c1cc(O)cc(O)c1", "c1cc(O)ccc1O"],
         "Prehapten_Terpene_Diene": ["CC1=CCC(CC1)C(=C)C", "CC(=CCCC(C)(C=C)O)C", "CC(=CCCC(=CCO)C)C"],
         "Thiol_Mercaptobenzothiazole": ["[#16]=[#6]1[#7][#6]2[#6][#6][#6][#6][#6]2[#16]1"]
+    }
 
     METALLIC_SENSITIZERS = {
         "[Ni": "Nickel Chelation (TLR4 Activation)",
