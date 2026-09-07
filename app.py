@@ -626,6 +626,7 @@ class MolecularDynamicsAgent:
             "binding_mode": mode,
             "hbond_occupancy": f"{hbond_occ}%"
 
+            }
 
 # =====================================================================
 # AGENT 4: CHEMBBERTA MOLECULAR TRANSFORMER EMBEDDINGS
