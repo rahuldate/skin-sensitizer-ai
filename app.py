@@ -390,6 +390,8 @@ class UniversalChemicalResolver:
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*"
 
+    }
+
     @staticmethod
     def _is_metal_structure(smiles: str) -> bool:
         if not smiles:
