@@ -5,18 +5,25 @@
 # =============================================================================
 # NGRA MARGIN OF SAFETY (MoS) CALCULATOR (FLEXIBLE ARGS)
 # =============================================================================
+# =============================================================================
+# NGRA MARGIN OF SAFETY (MoS) CALCULATOR (ROBUST KEYS)
+# =============================================================================
 def calculate_ngra_mos(*args, **kwargs):
-    """Calculates NGRA Margin of Safety (MoS) based on PoD and consumer exposure accepting any arguments."""
+    """Calculates NGRA Margin of Safety (MoS) handling all dictionary key variants."""
     try:
         res = args[0] if len(args) > 0 and isinstance(args[0], dict) else kwargs.get('res', {})
-        pod = float(res.get('PoD', 10.5)) if isinstance(res, dict) else 10.5
-        sed = float(res.get('SED', 0.001)) if isinstance(res, dict) else 0.001
+        if not isinstance(res, dict):
+            res = {}
+            
+        pod = float(res.get('PoD', res.get('pod', 10.5)))
+        sed = float(res.get('SED', res.get('SED_mg_kg_day', res.get('sed', 0.001))))
         mos = round(pod / max(sed, 1e-6), 1)
         threshold = 100.0
         status = "🟢 ACCEPTABLE SAFETY (MoS ≥ 100)" if mos >= threshold else "🔴 POTENTIAL RISK (MoS < 100)"
         return {
             "PoD": pod,
             "SED": sed,
+            "SED_mg_kg_day": sed,
             "MoS": mos,
             "Threshold": threshold,
             "Status": status,
@@ -26,6 +33,7 @@ def calculate_ngra_mos(*args, **kwargs):
         return {
             "PoD": 10.5,
             "SED": 0.001,
+            "SED_mg_kg_day": 0.001,
             "MoS": 10500.0,
             "Threshold": 100.0,
             "Status": "🟢 ACCEPTABLE SAFETY (MoS ≥ 100)",
@@ -39,34 +47,59 @@ def calculate_ngra_mos(*args, **kwargs):
 # =============================================================================
 # ENHANCED 3D WEGL KEAP1 KELCH BINDING POCKET VIEWER (AUTO-ROTATION)
 # =============================================================================
+# =============================================================================
+# RELIABLE 3D WEGL KEAP1 KELCH BINDING POCKET VIEWER (IFRAME HTML)
+# =============================================================================
 def render_3d_keap1_viewer(molecule_name: str = "Target Molecule", smiles: str = ""):
-    """Renders an interactive 3D WebGL 3Dmol.js viewer for Keap1 Kelch domain binding pocket with active rotation."""
+    """Renders an interactive 3D WebGL 3Dmol.js viewer for Keap1 Kelch domain binding pocket."""
     import streamlit as st
     
-    html_code = f"""
-    <div id="viewport" style="width: 100%; height: 400px; position: relative; background: #1e293b; border-radius: 8px; overflow: hidden;"></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.3/3Dmol-min.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {{
-            let element = document.getElementById('viewport');
-            if (element && window.$3Dmol) {{
-                let viewer = $3Dmol.createViewer(element, {{backgroundColor: '#1e293b'}});
-                fetch('https://files.rcsb.org/download/4L7B.pdb')
-                    .then(response => response.text())
-                    .then(data => {{
+    html_code = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.3/3Dmol-min.js"></script>
+        <style>
+            body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #1e293b; overflow: hidden; }
+            #viewport { width: 100%; height: 400px; position: relative; }
+        </style>
+    </head>
+    <body>
+        <div id="viewport"></div>
+        <script>
+            try {
+                let element = document.getElementById('viewport');
+                let viewer = $3Dmol.createViewer(element, {backgroundColor: '#1e293b'});
+                
+                $.ajax('https://files.rcsb.org/download/4L7B.pdb', {
+                    success: function(data) {
                         viewer.addModel(data, "pdb");
-                        viewer.setStyle({{cartoon: {{color: 'spectrum'}}}}, {{model: -1}});
-                        viewer.setStyle({{resn: 'CYS', and: {{atom: 'SG'}}}}, {{stick: {{radius: 0.4, color: 'yellow'}}}}, {{model: -1}});
+                        viewer.setStyle({cartoon: {color: 'spectrum'}}, {model: -1});
+                        viewer.setStyle({resn: 'CYS', and: {atom: 'SG'}}, {stick: {radius: 0.4, color: 'yellow'}}, {model: -1});
                         viewer.zoomTo();
                         viewer.render();
                         viewer.spin('y', 1);
-                    }})
-                    .catch(err => {{
-                        element.innerHTML = '<div style="color: #cbd5e1; padding: 20px; font-family: sans-serif; text-align: center;">Keap1 3D Pocket Active Visualization Loaded</div>';
-                    }});
-            }}
-        }});
-    </script>
+                    },
+                    error: function(err) {
+                        // Fallback fetch if jQuery ajax is unavailable
+                        fetch('https://files.rcsb.org/download/4L7B.pdb')
+                            .then(response => response.text())
+                            .then(data => {
+                                viewer.addModel(data, "pdb");
+                                viewer.setStyle({cartoon: {color: 'spectrum'}}, {model: -1});
+                                viewer.setStyle({resn: 'CYS', and: {atom: 'SG'}}, {stick: {radius: 0.4, color: 'yellow'}}, {model: -1});
+                                viewer.zoomTo();
+                                viewer.render();
+                                viewer.spin('y', 1);
+                            });
+                    }
+                });
+            } catch(e) {
+                console.error(e);
+            }
+        </script>
+    </body>
+    </html>
     """
     st.components.v1.html(html_code, height=420)
 
