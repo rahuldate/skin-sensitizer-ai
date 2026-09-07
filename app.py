@@ -3741,7 +3741,7 @@ with tab_copilot:
                             genai.configure(api_key=api_key_val)
                         sys_prompt = "You are the OECD GL 497 Autonomous Multi-Agent Toxicological Council. Answer scientific inquiries on skin sensitization, OpenMM Keap1 molecular dynamics, in vitro defined approaches, and medicinal chemistry bioisosteres."
                         model = genai.GenerativeModel(
-                            model_name="gemini-1.5-flash",
+                            model_name="gemini-2.5-flash",
                             system_instruction=sys_prompt
                         )
                         chat_resp = model.generate_content(
