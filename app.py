@@ -1,5 +1,24 @@
 
 # =============================================================================
+# ULTIMATE RUNTIME ERROR BOUNDARY FOR STREAMLIT
+# =============================================================================
+import streamlit as st
+import traceback
+
+try:
+    # Ensure page config is safely called first if not already present
+    if not getattr(st, '_is_page_config_called', False):
+        try:
+            st.set_page_config(page_title="Skin Sensitization AI", page_icon="🧪", layout="wide")
+            st._is_page_config_called = True
+        except Exception:
+            pass
+except Exception:
+    pass
+
+
+
+# =============================================================================
 # RENDER SAFETY & EXCEPTION CATCHER MONKEYPATCH
 # =============================================================================
 import traceback
