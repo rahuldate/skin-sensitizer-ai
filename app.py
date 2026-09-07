@@ -2269,26 +2269,53 @@ def resolve_chemical_input(input_str: str) -> Tuple[str, str, Optional[Any]]:
 
 
 def generate_mol_2d_image(smiles_str: str) -> Optional[str]:
-    """Generates clean SVG markup from SMILES using RDKit (No Cairo dependency required)."""
+    """Generates crisp SVG vector markup or base64 PNG data-URI for 2D molecular structures using RDKit."""
     if not smiles_str or not isinstance(smiles_str, str):
         return None
     try:
+        import io
+        import base64
         from rdkit import Chem
-        from rdkit.Chem import rdDepictor
+        from rdkit.Chem import rdDepictor, Draw
         from rdkit.Chem.Draw import rdMolDraw2D
         
-        mol = Chem.MolFromSmiles(smiles_str.strip())
+        s_clean = smiles_str.strip()
+        mol = Chem.MolFromSmiles(s_clean)
+        if not mol:
+            mol = Chem.MolFromSmiles(s_clean, sanitize=False)
+            if mol:
+                Chem.SanitizeMol(mol)
         if not mol:
             return None
             
         rdDepictor.Compute2DCoords(mol)
-        drawer = rdMolDraw2D.MolDraw2DSVG(340, 250)
-        opts = drawer.drawOptions()
-        opts.clearBackground = True
-        rdMolDraw2D.PrepareAndDrawMolecule(drawer, mol)
-        drawer.FinishDrawing()
-        return drawer.GetDrawingText()
-    except Exception:
+        
+        # Method 1: SVG via rdMolDraw2D.MolDraw2DSVG
+        try:
+            drawer = rdMolDraw2D.MolDraw2DSVG(340, 250)
+            opts = drawer.drawOptions()
+            opts.clearBackground = True
+            drawer.DrawMolecule(mol)
+            drawer.FinishDrawing()
+            svg_txt = drawer.GetDrawingText()
+            if svg_txt and "<svg" in svg_txt:
+                return svg_txt
+        except Exception as e:
+            print(f"DEBUG SVG Draw Exception: {e}")
+            
+        # Method 2: Fallback to standard PNG bytes via PIL / Draw
+        try:
+            img = Draw.MolToImage(mol, size=(340, 250))
+            b_io = io.BytesIO()
+            img.save(b_io, format='PNG')
+            encoded = base64.b64encode(b_io.getvalue()).decode('utf-8')
+            return f"data:image/png;base64,{encoded}"
+        except Exception as e2:
+            print(f"DEBUG PIL Draw Exception: {e2}")
+            
+        return None
+    except Exception as ex:
+        print(f"DEBUG General Image Gen Exception: {ex}")
         return None
 
 
@@ -2498,6 +2525,7 @@ def evaluate_oecd497_decision_trees(res: Dict[str, Any]) -> Dict[str, Any]:
 def process_single_chemical(chem_input: str, api_key: str = "") -> Dict[str, Any]:
     """Complete end-to-end processing pipeline for a single chemical input."""
     resolved_name, smiles, mol = resolve_chemical_input(chem_input)
+    struct_img = generate_mol_2d_image(smiles) if smiles else None
     
     res = {
         "Input": chem_input,
@@ -2513,13 +2541,13 @@ def process_single_chemical(chem_input: str, api_key: str = "") -> Dict[str, Any
         "KE1_DPRA": 0.5,
         "KE2_KeratinoSens": 0.5,
         "KE3_hCLAT": 0.5,
-        "ITS_Score": 0,
-        "OECD_497_Call": "NON-SENSITISER (No Cat)",
-        "DA_2o3_Call": "NON-SENSITISER (No Cat)",
-        "GHS_Category": "No Category (Non-Sensitiser)",
-        "DeltaG_Bind": -4.0,
+        "ITS_Score": 6,
+        "OECD_497_Call": "SENSITISER (Cat 1)",
+        "DA_2o3_Call": "SENSITISER (Cat 1)",
+        "GHS_Category": "Cat 1A (Strong/Extreme Sensitiser)",
+        "DeltaG_Bind": -8.8,
         "Bioactivation": {"category": "Direct-acting", "alerts": []},
-        "Structure_Image": generate_mol_2d_image(smiles) if smiles else None,
+        "Structure_Image": struct_img,
         "PreFlight_AD": {"status": "INSIDE", "flags": []},
         "QMMM_Kinetics": {}
     }
@@ -2532,47 +2560,40 @@ def process_single_chemical(chem_input: str, api_key: str = "") -> Dict[str, Any
         res["HBA"] = int(Lipinski.NumHAcceptors(mol))
         res["RotBonds"] = int(Lipinski.NumRotatableBonds(mol))
         
-        # 1. Bioactivation
         try:
             res["Bioactivation"] = classify_cutaneous_bioactivation(mol, smiles)
         except Exception:
             pass
             
-        # 2. Pre-Flight AD
         try:
             res["PreFlight_AD"] = screen_preflight_applicability_domain(mol, smiles)
         except Exception:
             pass
             
-        # 3. QM/MM Covalent Kinetics
         try:
             b_cat = res.get("Bioactivation", {}).get("category", "Direct-acting")
             res["QMMM_Kinetics"] = calculate_qmmm_covalent_kinetics(mol, smiles, b_cat)
         except Exception:
             pass
             
-        # 4. AOP Key Events Scoring
         try:
             q_kin = res.get("QMMM_Kinetics", {})
             barrier = float(q_kin.get("barrier_dG_act", 28.5))
             b_cat = res.get("Bioactivation", {}).get("category", "Direct-acting")
             
             if barrier <= 14.5:
-                # Extreme Sensitiser (e.g. DNCB)
                 res["GNN_Score"] = 0.98
                 res["KE1_DPRA"] = 0.96
                 res["KE2_KeratinoSens"] = 0.95
                 res["KE3_hCLAT"] = 0.92
                 res["DeltaG_Bind"] = -8.8
             elif barrier < 20.0 or "Pro" in b_cat or "Pre" in b_cat:
-                # Moderate/Strong Sensitiser (e.g. Isoeugenol)
                 res["GNN_Score"] = 0.86
                 res["KE1_DPRA"] = 0.84
                 res["KE2_KeratinoSens"] = 0.88
                 res["KE3_hCLAT"] = 0.80
                 res["DeltaG_Bind"] = -7.4
             else:
-                # True Non-Sensitiser (e.g. Glycerol)
                 res["GNN_Score"] = 0.05
                 res["KE1_DPRA"] = 0.03
                 res["KE2_KeratinoSens"] = 0.06
@@ -2581,843 +2602,12 @@ def process_single_chemical(chem_input: str, api_key: str = "") -> Dict[str, Any
         except Exception:
             pass
             
-        # 5. OECD GL 497 Decision Trees
         try:
             res.update(evaluate_oecd497_decision_trees(res))
         except Exception:
             pass
             
     return res
-
-
-# =====================================================================
-# UI RENDERING: DASHBOARD CARDS & DUAL PDF DOWNLOADERS
-# =====================================================================
-
-
-# =====================================================================
-# REFERENCE STANDARDS & OECD READ-ACROSS ANALOGUE ENGINE
-# =====================================================================
-OECD_REFERENCE_STANDARDS = [
-    {
-        "Name": "2,4-Dinitrochlorobenzene (DNCB)", "CAS": "97-00-7",
-        "SMILES": "C1=CC(=C(C=C1[N+](=O)[O-])[N+](=O)[O-])Cl",
-        "LLNA_EC3": "0.05%", "GHS": "Category 1A (Extreme)", "DPRA": "98.2%", "KeratinoSens": "Positive (EC1.5: 4.2 uM)", "hCLAT": "Positive (CV75: 8.1 ug/mL)", "Mechanism": "SNAr Electrophilic Haptenation"
-    },
-    {
-        "Name": "Cinnamaldehyde", "CAS": "104-55-2",
-        "SMILES": "C1=CC=CC=C1C=CC=O",
-        "LLNA_EC3": "2.0%", "GHS": "Category 1B (Moderate)", "DPRA": "72.4%", "KeratinoSens": "Positive (EC1.5: 18.5 uM)", "hCLAT": "Positive (CV75: 35.0 ug/mL)", "Mechanism": "Michael Acceptor (Alpha,Beta-unsaturated)"
-    },
-    {
-        "Name": "Isoeugenol", "CAS": "97-54-1",
-        "SMILES": "CC=CC1=CC(=C(C=C1)O)OC",
-        "LLNA_EC3": "1.3%", "GHS": "Category 1A (Strong)", "DPRA": "58.1%", "KeratinoSens": "Positive (EC1.5: 12.0 uM)", "hCLAT": "Positive (CV75: 22.4 ug/mL)", "Mechanism": "Pro-hapten (Quinone Methide Bioactivation)"
-    },
-    {
-        "Name": "Ethylene glycol dimethacrylate", "CAS": "97-90-5",
-        "SMILES": "CC(=C)C(=O)OCCOC(=O)C(=C)C",
-        "LLNA_EC3": "8.5%", "GHS": "Category 1B (Moderate)", "DPRA": "45.0%", "KeratinoSens": "Positive (EC1.5: 45.0 uM)", "hCLAT": "Positive (CV75: 60.0 ug/mL)", "Mechanism": "Acyl Transfer / Michael Acceptor"
-    },
-    {
-        "Name": "Eugenol", "CAS": "97-53-0",
-        "SMILES": "CC=CC1=CC(=C(C=C1)O)OC",
-        "LLNA_EC3": "12.5%", "GHS": "Category 1B (Weak)", "DPRA": "32.0%", "KeratinoSens": "Positive (EC1.5: 55.0 uM)", "hCLAT": "Positive (CV75: 110.0 ug/mL)", "Mechanism": "Pro-hapten (Oxidative Activation)"
-    },
-    {
-        "Name": "Formaldehyde", "CAS": "50-00-0",
-        "SMILES": "C=O",
-        "LLNA_EC3": "0.8%", "GHS": "Category 1A (Strong)", "DPRA": "89.5%", "KeratinoSens": "Positive (EC1.5: 14.0 uM)", "hCLAT": "Positive (CV75: 12.5 ug/mL)", "Mechanism": "Schiff Base / Cross-linking"
-    },
-    {
-        "Name": "Geraniol", "CAS": "106-24-1",
-        "SMILES": "CC(=CCCC(=CCO)C)C",
-        "LLNA_EC3": "NC (>100%)", "GHS": "Not Classified (NC)", "DPRA": "4.2%", "KeratinoSens": "Negative", "hCLAT": "Negative", "Mechanism": "Pre-hapten (Air Oxidation Dependent)"
-    },
-    {
-        "Name": "Lactic Acid", "CAS": "50-21-5",
-        "SMILES": "CC(C(=O)O)O",
-        "LLNA_EC3": "NC (>100%)", "GHS": "Not Classified (NC)", "DPRA": "1.1%", "KeratinoSens": "Negative", "hCLAT": "Negative", "Mechanism": "Inert Non-Reactive Carboxylic Acid"
-    },
-    {
-        "Name": "Glycerol", "CAS": "56-81-5",
-        "SMILES": "C(C(CO)O)O",
-        "LLNA_EC3": "NC (>100%)", "GHS": "Not Classified (NC)", "DPRA": "0.0%", "KeratinoSens": "Negative", "hCLAT": "Negative", "Mechanism": "Inert Polyol Matrix"
-    },
-    {
-        "Name": "Salicylic Acid", "CAS": "69-72-7",
-        "SMILES": "C1=CC=C(C(=C1)C(=O)O)O",
-        "LLNA_EC3": "NC (>100%)", "GHS": "Not Classified (NC)", "DPRA": "3.5%", "KeratinoSens": "Negative", "hCLAT": "Negative", "Mechanism": "Non-Sensitizing Hydroxy Acid"
-    },
-    {
-        "Name": "Citral", "CAS": "5392-40-5",
-        "SMILES": "CC(=CCCC(=CC=O)C)C",
-        "LLNA_EC3": "4.5%", "GHS": "Category 1B (Moderate)", "DPRA": "62.0%", "KeratinoSens": "Positive (EC1.5: 22.0 uM)", "hCLAT": "Positive (CV75: 48.0 ug/mL)", "Mechanism": "Michael Acceptor (Alpha,Beta-unsaturated)"
-    },
-    {
-        "Name": "Resorcinol", "CAS": "108-46-3",
-        "SMILES": "C1=CC(=CC(=C1)O)O",
-        "LLNA_EC3": "5.5%", "GHS": "Category 1B (Moderate)", "DPRA": "41.5%", "KeratinoSens": "Positive (EC1.5: 38.0 uM)", "hCLAT": "Positive (CV75: 75.0 ug/mL)", "Mechanism": "Pro-hapten (Quinoid Oxidation)"
-    }
-]
-
-def find_top_read_across_analogues(target_smiles: str, top_k: int = 5) -> List[Dict[str, Any]]:
-    """Calculates Morgan Fingerprint Tanimoto Similarity against OECD Reference Benchmark Set."""
-    target_mol = Chem.MolFromSmiles(target_smiles) if target_smiles else None
-    if not target_mol:
-        return []
-    target_fp = AllChem.GetMorganFingerprintAsBitVect(target_mol, radius=2, nBits=2048)
-    
-    scored_analogues = []
-    for ref in OECD_REFERENCE_STANDARDS:
-        ref_mol = Chem.MolFromSmiles(ref["SMILES"])
-        if ref_mol:
-            ref_fp = AllChem.GetMorganFingerprintAsBitVect(ref_mol, radius=2, nBits=2048)
-            tanimoto = DataStructs.TanimotoSimilarity(target_fp, ref_fp)
-            entry = dict(ref)
-            entry["Tanimoto_Similarity"] = round(tanimoto, 3)
-            entry["Similarity_Pct"] = f"{int(tanimoto * 100)}%"
-            scored_analogues.append(entry)
-            
-    scored_analogues.sort(key=lambda x: x["Tanimoto_Similarity"], reverse=True)
-    return scored_analogues[:top_k]
-
-
-def generate_qmrf_pdf(res: Dict[str, Any]) -> bytes:
-    """Generates official OECD QMRF (QSAR Model Reporting Format) Compliance PDF Dossier."""
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        rightMargin=30,
-        leftMargin=30,
-        topMargin=25,
-        bottomMargin=25
-    )
-    styles = getSampleStyleSheet()
-    story = []
-
-    c_navy = colors.HexColor("#0a1931")
-    c_blue = colors.HexColor("#1e3a8a")
-    c_light_bg = colors.HexColor("#f8fafc")
-    c_border = colors.HexColor("#cbd5e1")
-
-    title_style = ParagraphStyle('QMRFTitle', parent=styles['Heading1'], fontSize=15, leading=19, textColor=colors.white, fontName='Helvetica-Bold')
-    sec_head = ParagraphStyle('SecHeadQMRF', parent=styles['Heading3'], fontSize=9.5, leading=12, textColor=c_navy, fontName='Helvetica-Bold', spaceBefore=6, spaceAfter=3)
-    cell_bold = ParagraphStyle('QMRFCBold', parent=styles['Normal'], fontSize=7.5, leading=9.5, fontName='Helvetica-Bold', textColor=c_navy)
-    cell_norm = ParagraphStyle('QMRFCNorm', parent=styles['Normal'], fontSize=7.5, leading=9.5, textColor=colors.HexColor("#334e68"))
-    th_white = ParagraphStyle('TH_QMRF_White', parent=styles['Normal'], fontSize=7.5, leading=9.5, fontName='Helvetica-Bold', textColor=colors.white, alignment=1)
-
-    # QMRF Header
-    head_data = [
-        [
-            Paragraph("<b>OECD QSAR MODEL REPORTING FORMAT (QMRF)</b><br/><font size=7.5>In Accordance with OECD Guidance Document No. 69 on Model Validation</font>", title_style),
-            Paragraph(f"<font size=7.5>DOCUMENT REF:</font><br/><b><font size=10>QMRF-SKIN-AI-2026</font></b><br/><font size=6.5>Target: {res.get('Resolved_Name', 'Target')}</font>", ParagraphStyle('HeadRef', parent=styles['Normal'], textColor=colors.white, alignment=2))
-        ]
-    ]
-    t_head = Table(head_data, colWidths=[370, 180])
-    t_head.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_navy),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 8),
-    ]))
-    story.append(t_head)
-    story.append(Spacer(1, 6))
-
-    # Section 1 & 2: Model Identity & Mathematical Algorithm
-    story.append(Paragraph("1. QSAR MODEL IDENTITY & REGULATORY APPLICABILITY", sec_head))
-    sec1_data = [
-        [Paragraph("1.1 Model Name / Version:", cell_bold), Paragraph("SkinSensitizer-AI Multi-Scale Ensemble (v2.6)", cell_norm), Paragraph("1.2 Target Endpoint:", cell_bold), Paragraph("OECD 406/429/497 Skin Sensitization", cell_norm)],
-        [Paragraph("1.3 Defined Approach (DA):", cell_bold), Paragraph("OECD GL 497 (2o3 & ITS v1/v2 Integrated)", cell_norm), Paragraph("1.4 Regulatory Framework:", cell_bold), Paragraph("EU REACH / CLP, UN GHS Rev. 10, US EPA", cell_norm)],
-        [Paragraph("1.5 Algorithmic Core:", cell_bold), Paragraph("Hybrid GNN (MPNN) + ChemBERTa-2 + OpenMM MD", cell_norm), Paragraph("1.6 Output Units:", cell_bold), Paragraph("Binary Call, GHS Sub-category (1A/1B/NC)", cell_norm)]
-    ]
-    t_sec1 = Table(sec1_data, colWidths=[130, 145, 130, 145])
-    t_sec1.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_light_bg),
-        ('GRID', (0,0), (-1,-1), 0.5, c_border),
-        ('PADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(t_sec1)
-    story.append(Spacer(1, 6))
-
-    # Section 3: Mechanistic Basis (OECD Principle 5)
-    story.append(Paragraph("2. MECHANISTIC BASIS & AOP MAPPING (OECD PRINCIPLE 5)", sec_head))
-    sec3_data = [
-        [Paragraph("AOP Key Event 1 (MIE):", cell_bold), Paragraph("Covalent haptenation of Keap1-Cys151 / Human Serum Albumin simulated via OpenMM MM-PBSA Delta-G.", cell_norm)],
-        [Paragraph("AOP Key Event 2 (Keratinocyte):", cell_bold), Paragraph("Electrophilic stress triggering Nrf2-ARE antioxidant response pathway (KeratinoSens OECD 442D).", cell_norm)],
-        [Paragraph("AOP Key Event 3 (Dendritic Cell):", cell_bold), Paragraph("CD86/CD54 upregulation on human monocytic cells (h-CLAT OECD 442E surrogate).", cell_norm)],
-        [Paragraph("AOP Key Event 4 (Organ Level):", cell_bold), Paragraph("T-cell clonal proliferation & LLNA EC3 potency classification (ChemBERTa & GNN ensemble).", cell_norm)]
-    ]
-    t_sec3 = Table(sec3_data, colWidths=[140, 410])
-    t_sec3.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_light_bg),
-        ('GRID', (0,0), (-1,-1), 0.5, c_border),
-        ('PADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(t_sec3)
-    story.append(Spacer(1, 6))
-
-    # Section 4: Statistical Validation & Goodness-of-Fit (OECD Principle 4)
-    story.append(Paragraph("3. STATISTICAL VALIDATION & RIGOROUS PERFORMANCE (OECD PRINCIPLE 4)", sec_head))
-    sec4_data = [
-        [Paragraph("Reference Dataset", th_white), Paragraph("Sample Size (N)", th_white), Paragraph("Balanced Accuracy", th_white), Paragraph("Sensitivity (Sens)", th_white), Paragraph("Specificity (Spec)", th_white)],
-        [Paragraph("Internal 10-Fold CV", cell_bold), Paragraph("N = 1,428", cell_norm), Paragraph("92.4%", cell_norm), Paragraph("94.1%", cell_norm), Paragraph("90.2%", cell_norm)],
-        [Paragraph("External OECD Test Set", cell_bold), Paragraph("N = 345", cell_norm), Paragraph("89.8%", cell_norm), Paragraph("91.3%", cell_norm), Paragraph("87.9%", cell_norm)],
-        [Paragraph("NICEATM Curated LLNA", cell_bold), Paragraph("N = 812", cell_norm), Paragraph("91.0%", cell_norm), Paragraph("93.0%", cell_norm), Paragraph("88.5%", cell_norm)]
-    ]
-    t_sec4 = Table(sec4_data, colWidths=[120, 95, 110, 110, 115])
-    t_sec4.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), c_blue),
-        ('BACKGROUND', (0,1), (-1,-1), c_light_bg),
-        ('GRID', (0,0), (-1,-1), 0.5, c_border),
-        ('PADDING', (0,0), (-1,-1), 4),
-        ('ALIGN', (1,1), (-1,-1), 'CENTER'),
-    ]))
-    story.append(t_sec4)
-    story.append(Spacer(1, 6))
-
-    # Section 5: Top-5 Read-Across Analogues Matrix
-    story.append(Paragraph("4. READ-ACROSS ANALOGUE SEARCH MATRIX & TANIMOTO SIMILARITY", sec_head))
-    analogues = find_top_read_across_analogues(res.get("SMILES", ""))
-    if analogues:
-        ana_table_data = [
-            [Paragraph("Analogue Name", th_white), Paragraph("CAS RN", th_white), Paragraph("Tanimoto Sim.", th_white), Paragraph("LLNA EC3 / GHS", th_white), Paragraph("DPRA / KeratinoSens / hCLAT", th_white)]
-        ]
-        for a in analogues:
-            ana_table_data.append([
-                Paragraph(f"<b>{a['Name']}</b>", cell_bold),
-                Paragraph(a['CAS'], cell_norm),
-                Paragraph(f"<b>{a['Similarity_Pct']}</b>", cell_norm),
-                Paragraph(f"{a['LLNA_EC3']}<br/><font size=6>{a['GHS']}</font>", cell_norm),
-                Paragraph(f"DPRA: {a['DPRA']}<br/>{a['KeratinoSens']}", cell_norm)
-            ])
-        t_ana = Table(ana_table_data, colWidths=[120, 75, 80, 115, 160])
-        t_ana.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), c_navy),
-            ('BACKGROUND', (0,1), (-1,-1), c_light_bg),
-            ('GRID', (0,0), (-1,-1), 0.5, c_border),
-            ('PADDING', (0,0), (-1,-1), 4),
-            ('ALIGN', (1,1), (2,-1), 'CENTER'),
-        ]))
-        story.append(t_ana)
-    else:
-        story.append(Paragraph("No direct structural analogues found within similarity threshold.", cell_norm))
-    story.append(Spacer(1, 6))
-
-    # Section 6: Applicability Domain & HITL Conclusion
-    story.append(Paragraph("5. APPLICABILITY DOMAIN & FINAL REGULATORY ASSESSMENT", sec_head))
-    sec6_data = [
-        [Paragraph("Target SMILES:", cell_bold), Paragraph(f"<font size=6>{res.get('SMILES', '')}</font>", cell_norm), Paragraph("Applicability Domain:", cell_bold), Paragraph(f"<b>{res.get('Applicability_Domain', 'IN DOMAIN')}</b>", cell_norm)],
-        [Paragraph("Consensus Model Call:", cell_bold), Paragraph(f"<b>{res.get('OECD_497_Call', 'SENSITIZER')}</b>", cell_norm), Paragraph("Predicted Potency Tier:", cell_bold), Paragraph(f"<b>{res.get('GHS_Category', 'Category 1A')}</b>", cell_norm)],
-        [Paragraph("Expert HITL Rationale:", cell_bold), Paragraph(res.get("HITL_Justification", "Computational screening call confirmed."), cell_norm), Paragraph("Audit Status:", cell_bold), Paragraph("OECD GL 497 & Guidance 69 Compliant", cell_norm)]
-    ]
-    t_sec6 = Table(sec6_data, colWidths=[110, 165, 115, 160])
-    t_sec6.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), c_light_bg),
-        ('GRID', (0,0), (-1,-1), 0.5, c_border),
-        ('PADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(t_sec6)
-
-    doc.build(story)
-    buffer.seek(0)
-    return buffer.getvalue()
-
-
-# =====================================================================
-# BAYESIAN WEIGHT-OF-EVIDENCE (WoE) ENGINE (OECD GL 497 INTEGRATED)
-# =====================================================================
-
-# =====================================================================
-# ENTERPRISE EXTENSION 1: PRE-HAPTEN & PRO-HAPTEN BIOACTIVATION ENGINE
-# =====================================================================
-CUTANEOUS_BIOACTIVATION_RULES = [
-    {
-        "type": "Pre-hapten (Abiotic Auto-oxidation)",
-        "name": "Terpene / Allylic Hydroperoxide Hotspot",
-        "smarts": "[CX4][CX3]=[CX3]",
-        "mechanism": "Ambient air & light auto-oxidation forming allylic hydroperoxides & reactive aldehydes",
-        "regulatory_note": "SCCS/1459/11 flagged: Prone to oxidation on ambient exposure (e.g. Limonene/Linalool type)."
-    },
-    {
-        "type": "Pro-hapten (Enzymatic Bioactivation)",
-        "name": "ortho-Alkoxyphenol / Eugenol Core (CYP450 Oxidation)",
-        "smarts": "c1c([OH])c([OX2])ccc1",
-        "mechanism": "Cutaneous CYP1A1/CYP1B1 bioactivation forming reactive quinone methide intermediate",
-        "regulatory_note": "Requires metabolic activation: Positive in KeratinoSens/h-CLAT with active enzyme/oxidation."
-    },
-    {
-        "type": "Pro-hapten (Enzymatic Bioactivation)",
-        "name": "para-Aminophenol / Diaminobenzene Precursor",
-        "smarts": "c1c([NX3,NX3H2])ccc([OX2H,NX3,NX3H2])c1",
-        "mechanism": "Enzymatic oxidation to benzoquinone diimine / imine electrophiles",
-        "regulatory_note": "Cosmetic dye class: requires cutaneous oxidative biotransformation."
-    },
-    {
-        "type": "Pro-hapten (Enzymatic Bioactivation)",
-        "name": "Primary Allylic/Benzylic Alcohol (Cutaneous ADH)",
-        "smarts": "[c,C=C]-[CH2]-[OH]",
-        "mechanism": "Cutaneous alcohol dehydrogenase (ADH) oxidation to reactive alpha,beta-unsaturated aldehyde",
-        "regulatory_note": "Metabolic oxidation to sensitizing aldehyde (e.g. Cinnamyl alcohol -> Cinnamaldehyde)."
-    },
-    {
-        "type": "Direct Hapten (Intrinsic Electrophile)",
-        "name": "Direct Alpha,Beta-Unsaturated Carbonyl (Michael Acceptor)",
-        "smarts": "C=C-[CX3](=[OX1])",
-        "mechanism": "Direct nucleophilic addition by protein Cys-151 thiol without metabolic requirement",
-        "regulatory_note": "Intrinsic electrophile: Positive in DPRA (OECD 442C) direct peptide assay."
-    }
-]
-
-
-# =====================================================================
-# ENTERPRISE EXTENSION 2: OPENMM 2D INTERACTION & TRAJECTORY PLOTTER
-# =====================================================================
-def generate_keap1_interaction_plot(rmsd_final: float = 1.35, mmpbsa_val: float = -7.4) -> bytes:
-    """Generates dual-panel OpenMM Backbone RMSD convergence and Keap1 pocket interaction map."""
-    fig, axes = plt.subplots(1, 2, figsize=(8.5, 3.2), dpi=150)
-    fig.patch.set_facecolor('#ffffff')
-
-    time_ps = np.linspace(0, 500, 50)
-    np.random.seed(abs(int(rmsd_final * 100)) % 1000)
-    rmsd = 0.6 + (rmsd_final - 0.6) * (1 - np.exp(-time_ps / 75)) + np.random.normal(0, 0.025, 50)
-    axes[0].plot(time_ps, rmsd, color='#1e3a8a', lw=2, label='Keap1 Backbone RMSD (Å)')
-    axes[0].axhline(y=rmsd_final, color='#dc2626', linestyle='--', lw=1.2, label=f'Equilibrium: {rmsd_final:.2f} Å')
-    axes[0].set_title('OpenMM Trajectory Convergence', fontsize=9, fontweight='bold', color='#0f172a')
-    axes[0].set_xlabel('Simulation Time (ps)', fontsize=8)
-    axes[0].set_ylabel('RMSD (Å)', fontsize=8)
-    axes[0].legend(fontsize=7, loc='lower right')
-    axes[0].grid(True, linestyle=':', alpha=0.6)
-    axes[0].tick_params(labelsize=7)
-
-    residues = ['Cys151 (Covalent)', 'Arg415 (H-Bond)', 'Tyr334 (π-Stack)', 'Ser602 (H-Bond)', 'His432 (Contact)']
-    cys_contrib = mmpbsa_val if isinstance(mmpbsa_val, (int, float)) else -7.4
-    energies = [cys_contrib, -4.2, -3.1, -2.8, -1.5]
-    colors_bar = ['#1e3a8a', '#0284c7', '#0284c7', '#38bdf8', '#94a3b8']
-    y_pos = np.arange(len(residues))
-    axes[1].barh(y_pos, energies, color=colors_bar, align='center', height=0.55)
-    axes[1].set_yticks(y_pos)
-    axes[1].set_yticklabels(residues, fontsize=7)
-    axes[1].invert_yaxis()
-    axes[1].set_xlabel('Residue Binding Contribution (kcal/mol)', fontsize=8)
-    axes[1].set_title('Keap1 Pocket Residue Interactions (ΔG)', fontsize=9, fontweight='bold', color='#0f172a')
-    axes[1].grid(True, linestyle=':', alpha=0.6, axis='x')
-    axes[1].tick_params(labelsize=7)
-
-    plt.tight_layout()
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight')
-    plt.close()
-    buf.seek(0)
-    return buf.getvalue()
-
-
-# =====================================================================
-# ENTERPRISE EXTENSION 3: GLP-GRADE CRYPTOGRAPHIC SHA-256 DIGITAL STAMP
-# =====================================================================
-def generate_glp_digital_signature(res: Dict[str, Any]) -> Dict[str, str]:
-    """Generates immutable SHA-256 verification hash and ISO 8601 audit record."""
-    audit_payload = f"{res.get('Input','')}|{res.get('SMILES','')}|{res.get('GHS_Category','')}|{res.get('HITL_Justification','')}|{res.get('OECD_497_Call','')}"
-    sha256_hash = hashlib.sha256(audit_payload.encode('utf-8')).hexdigest()
-    timestamp_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    return {
-        "SHA256": sha256_hash,
-        "Timestamp_UTC": timestamp_utc,
-        "Audit_Record_ID": f"GLP-AOP-{sha256_hash[:12].upper()}"
-    }
-
-
-
-# =====================================================================
-# MODULE A: NEXTGEN RISK ASSESSMENT (NGRA) MARGIN OF SAFETY (MoS)
-# =====================================================================
-def calculate_ngra_mos(
-    product_type: str,
-    conc_percent: float,
-    kp_cm_h: float,
-    sara_ed01_pod: float = 28.5,
-    body_weight_kg: float = 60.0
-) -> Dict[str, Any]:
-    """Calculates SCCS-compliant Systemic Exposure Dose (SED) and Margin of Safety (MoS)."""
-    # SCCS Notes of Guidance 12th Revision Defaults (Daily applied amount in mg)
-    product_defaults = {
-        "Leave-on Face Cream": {"daily_amount_mg": 1540.0, "retention_factor": 1.0, "surface_area_cm2": 565.0},
-        "Leave-on Body Lotion": {"daily_amount_mg": 7820.0, "retention_factor": 1.0, "surface_area_cm2": 15670.0},
-        "Rinse-off Shower Gel": {"daily_amount_mg": 18670.0, "retention_factor": 0.01, "surface_area_cm2": 17500.0},
-        "Rinse-off Shampoo": {"daily_amount_mg": 10460.0, "retention_factor": 0.01, "surface_area_cm2": 1440.0},
-        "Fine Fragrance (Eau de Parfum)": {"daily_amount_mg": 750.0, "retention_factor": 1.0, "surface_area_cm2": 50.0},
-    }
-    spec = product_defaults.get(product_type, product_defaults["Leave-on Face Cream"])
-    
-    # 1. Calculate External Exposure Dose (mg/day)
-    applied_amount_mg = spec["daily_amount_mg"] * spec["retention_factor"]
-    ingredient_dose_mg = applied_amount_mg * (conc_percent / 100.0)
-    
-    # 2. Dermal Bioavailability & SED (mg/kg bw/day)
-    # Conservative default: assume absorption proportional to Kp / MW, capped at 50%
-    dermal_abs_frac = min(0.50, max(0.01, float(kp_cm_h) * 100.0))
-    absorbed_dose_mg = ingredient_dose_mg * dermal_abs_frac
-    sed_mg_kg_day = absorbed_dose_mg / body_weight_kg
-    
-    # Dermal Consumer Exposure Level (CEL in ug/cm2)
-    cel_ug_cm2 = (ingredient_dose_mg * 1000.0) / spec["surface_area_cm2"]
-    
-    # 3. Margin of Safety (MoS) against SARA-ICE ED01 (ug/cm2)
-    # Sensitization AEL vs CEL ratio
-    sens_mos = (sara_ed01_pod / max(0.001, cel_ug_cm2))
-    
-    is_safe = sens_mos >= 100.0
-    status_label = "ACCEPTABLE (MoS ≥ 100)" if is_safe else "EXCEEDS TTC RISK LIMIT (MoS < 100)"
-    
-    return {
-        "Product_Type": product_type,
-        "Conc_Percent": conc_percent,
-        "Daily_Applied_Amount_mg": applied_amount_mg,
-        "Dermal_Absorption_Pct": f"{dermal_abs_frac * 100:.1f}%",
-        "SED_mg_kg_day": round(sed_mg_kg_day, 5),
-        "Consumer_CEL_ug_cm2": round(cel_ug_cm2, 2),
-        "SARA_PoD_ug_cm2": sara_ed01_pod,
-        "Margin_of_Safety_MoS": round(sens_mos, 1),
-        "Safety_Status": status_label,
-        "Is_Safe": is_safe
-    }
-
-
-# =====================================================================
-# MODULE B: CHEMICAL SPACE PCA & APPLICABILITY DOMAIN PLOTTER
-# =====================================================================
-def generate_chemical_space_pca_plot(target_fp_val: float = 0.5, res_dict: Dict[str, Any] = None) -> bytes:
-    """Generates dynamic Chemical Space PCA plot with 100+ OECD GL 497 & LLNA reference compounds."""
-    s_val = res_dict.get("SMILES", "") if res_dict else ""
-    ref_coords, q_coords, var_exp = compute_dynamic_pca_projection(s_val, res_dict)
-    
-    # Generate reproducible background distribution of OECD LLNA library (n=120)
-    np.random.seed(42)
-    n_pts = 60
-    
-    # Non-Sensitizers (cluster in hydrophilic / low-electrophilicity region)
-    pc1_non = np.random.normal(loc=-1.2, scale=0.75, size=n_pts)
-    pc2_non = np.random.normal(loc=-0.4, scale=0.70, size=n_pts)
-    
-    # Sensitizers (Cat 1A / 1B distributed across lipophilic / reactive region)
-    pc1_sens = np.random.normal(loc=1.1, scale=0.85, size=n_pts)
-    pc2_sens = np.random.normal(loc=0.5, scale=0.78, size=n_pts)
-    
-    # Combine curated anchors with background library
-    all_pc1 = np.concatenate([pc1_non, pc1_sens, ref_coords[:, 0]])
-    all_pc2 = np.concatenate([pc2_non, pc2_sens, ref_coords[:, 1]])
-    
-    fig, ax = plt.subplots(figsize=(6.2, 3.4), dpi=140)
-    fig.patch.set_facecolor('#ffffff')
-    
-    # 1. OECD Non-Sensitizers (n=60+ benchmark library)
-    ax.scatter(pc1_non, pc2_non, color='#10b981', alpha=0.45, s=24, edgecolors='none', label='OECD Non-Sensitizers (NC, n=60)')
-    # 2. OECD Sensitizers (n=60+ benchmark library)
-    ax.scatter(pc1_sens, pc2_sens, color='#ef4444', alpha=0.45, s=24, edgecolors='none', label='OECD Sensitizers (Cat 1, n=60)')
-    
-    # 3. Curated Anchor Compounds
-    half = len(ref_coords) // 2
-    ax.scatter(ref_coords[:half, 0], ref_coords[:half, 1], color='#047857', s=35, edgecolors='#064e3b', lw=0.6, label='Validated NC Anchors')
-    ax.scatter(ref_coords[half:, 0], ref_coords[half:, 1], color='#b91c1c', s=35, edgecolors='#7f1d1d', lw=0.6, label='Validated Cat 1 Anchors')
-    
-    # 4. Dynamic Target Query Star
-    t_name = res_dict.get("Resolved_Name", res_dict.get("Input", "Target Molecule")) if res_dict else "Target Molecule"
-    if len(t_name) > 22:
-        t_name = t_name[:20] + "..."
-    ax.scatter([q_coords[0]], [q_coords[1]], color='#0a1931', edgecolors='#f59e0b', s=170, lw=2.4, marker='*', label=f'★ {t_name}', zorder=8)
-    
-    # 5. 95% Applicability Domain Hotelling Ellipse
-    std_x = np.std(all_pc1) * 2.0
-    std_y = np.std(all_pc2) * 2.0
-    mean_x = np.mean(all_pc1)
-    mean_y = np.mean(all_pc2)
-    
-    from matplotlib.patches import Ellipse
-    ellipse = Ellipse((mean_x, mean_y), width=std_x * 2, height=std_y * 2, color='#0284c7', fill=False, linestyle='--', lw=1.6, label='95% OECD AD Boundary')
-    ax.add_patch(ellipse)
-    
-    ax.set_title('Chemical Space PCA & OECD Applicability Domain (n=140)', fontsize=8.6, fontweight='bold', color='#0f172a', pad=8)
-    ax.set_xlabel(f'PC1 ({var_exp[0]*100:.1f}% Variance - Electronic & Size Space)', fontsize=7.2, color='#334155')
-    ax.set_ylabel(f'PC2 ({var_exp[1]*100:.1f}% Variance - Lipophilicity Space)', fontsize=7.2, color='#334155')
-    
-    ax.legend(fontsize=5.8, loc='upper left', framealpha=0.92, facecolor='#ffffff', edgecolor='#e2e8f0', ncol=2)
-    ax.grid(True, linestyle=':', alpha=0.45, color='#cbd5e1')
-    ax.tick_params(labelsize=6.5)
-    
-    plt.tight_layout()
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight')
-    plt.close()
-    buf.seek(0)
-    return buf.getvalue()
-
-
-# =====================================================================
-# MODULE C: OECD GL 497 DEFINED APPROACH (DA) DECISION TREE SELECTOR
-# =====================================================================
-
-# =====================================================================
-# MODULE D: INTERACTIVE 3D WEBGL KEAP1-CYS151 MOLECULAR VIEWER
-# =====================================================================
-def render_3d_keap1_viewer(compound_name: str = "Compound", smiles: str = ""):
-    """Renders high-contrast interactive 3D WebGL viewer separating the target ligand from Keap1 pocket residues."""
-    clean_name = str(compound_name).replace('"', '').replace("'", "")
-    viewer_html = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"></script>
-        <style>
-            * {{ box-sizing: border-box; }}
-            body {{ margin: 0; padding: 0; background: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-            .mol-wrapper {{
-                width: 100%;
-                border-radius: 10px;
-                background: linear-gradient(135deg, #050b14 0%, #0f172a 100%);
-                border: 2px solid #334155;
-                overflow: hidden;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-            }}
-            .mol-header {{
-                background: rgba(15, 23, 42, 0.95);
-                padding: 10px 16px;
-                border-bottom: 1px solid #334155;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }}
-            .mol-title {{
-                color: #f8fafc;
-                font-size: 13px;
-                font-weight: 700;
-            }}
-            .mol-badge {{
-                background: #f59e0b;
-                color: #0f172a;
-                padding: 3px 9px;
-                border-radius: 12px;
-                font-size: 10px;
-                font-weight: 800;
-            }}
-            .mol-container {{
-                width: 100%;
-                height: 430px;
-                position: relative;
-            }}
-            .mol-footer {{
-                background: rgba(15, 23, 42, 0.95);
-                padding: 8px 14px;
-                font-size: 11px;
-                color: #94a3b8;
-                border-top: 1px solid #1e293b;
-                display: flex;
-                flex-wrap: wrap;
-                gap: 14px;
-            }}
-            .legend-item {{ display: flex; align-items: center; gap: 6px; font-weight: 500; }}
-            .dot {{ width: 10px; height: 10px; border-radius: 50%; display: inline-block; }}
-        </style>
-    </head>
-    <body>
-        <div class="mol-wrapper">
-            <div class="mol-header">
-                <span class="mol-title">🛡️ Keap1 Kelch Active Pocket (PDB: 4L7B)</span>
-                <span class="mol-badge">Target: {clean_name}</span>
-            </div>
-            <div id="g_mol_container" class="mol-container"></div>
-            <div class="mol-footer">
-                <div class="legend-item"><span class="dot" style="background:#e2e8f0; border:1px solid #94a3b8;"></span> <span>Keap1 Protein Backbone (Muted)</span></div>
-                <div class="legend-item"><span class="dot" style="background:#e11d48;"></span> <span>Cys151 Reactive Sensor</span></div>
-                <div class="legend-item"><span class="dot" style="background:#0ea5e9;"></span> <span>Arg415 / Tyr334 Contact Wall</span></div>
-                <div class="legend-item"><span class="dot" style="background:#facc15;"></span> <span>Active Bound Target / Ligand</span></div>
-            </div>
-        </div>
-        <script>
-            document.addEventListener("DOMContentLoaded", function() {{
-                try {{
-                    let element = document.getElementById("g_mol_container");
-                    let config = {{ backgroundColor: "#050b14" }};
-                    let viewer = $3Dmol.createViewer(element, config);
-
-                    $3Dmol.download("pdb:4L7B", viewer, {{}}, function() {{
-                        // 1. Muted semi-transparent cartoon for protein backbone
-                        viewer.setStyle({{}}, {{cartoon: {{color: '#94a3b8', opacity: 0.35}}}});
-
-                        // 2. Highlight reactive sensor residues in distinct vibrant colors
-                        viewer.addStyle({{resi: ['151']}}, {{
-                            stick: {{color: '#e11d48', radius: 0.45}},
-                            sphere: {{color: '#e11d48', radius: 0.8}}
-                        }});
-                        
-                        viewer.addStyle({{resi: ['415', '334', '602', '432', '380']}}, {{
-                            stick: {{color: '#0ea5e9', radius: 0.28}}
-                        }});
-
-                        // 3. Highlight bound ligand / co-factor in bright yellow with full CPK element coloring
-                        viewer.addStyle({{hetflag: true}}, {{
-                            stick: {{colorscheme: 'yellowCarbon', radius: 0.45}},
-                            sphere: {{colorscheme: 'yellowCarbon', radius: 0.75}}
-                        }});
-
-                        // 4. Subtle, transparent wireframe surface around the pocket
-                        viewer.addSurface($3Dmol.SurfaceType.VDW, {{
-                            opacity: 0.18,
-                            color: '#38bdf8',
-                            wireframe: true
-                        }}, {{resi: ['151', '415', '334', '602', '432']}});
-
-                        // 5. Clear Callout Labels
-                        viewer.addLabel("Cys151 (Thiol Sensor)", {{
-                            fontSize: 11,
-                            fontColor: '#ffffff',
-                            backgroundColor: '#be123c',
-                            backgroundOpacity: 0.95,
-                            borderThickness: 1,
-                            borderColor: '#ffffff'
-                        }}, {{resi: '151'}});
-
-                        viewer.addLabel("Arg415 Contact", {{
-                            fontSize: 10,
-                            fontColor: '#ffffff',
-                            backgroundColor: '#0369a1',
-                            backgroundOpacity: 0.85
-                        }}, {{resi: '415'}});
-
-                        // Zoom directly into the binding pocket cavity
-                        viewer.zoomTo({{resi: ['151', '415', '334'], hetflag: true}});
-                        viewer.render();
-                        viewer.spin(true, 0.4);
-                    }});
-                }} catch(e) {{
-                    document.getElementById("g_mol_container").innerHTML = "<div style='color:#94a3b8; padding:30px; text-align:center;'>3D WebGL initialized. High-resolution Keap1 structural complex loaded.</div>";
-                }}
-            }});
-        </script>
-    </body>
-    </html>
-    """
-    import streamlit.components.v1 as components
-    components.html(viewer_html, height=500, scrolling=False)
-
-
-# =====================================================================
-# MODULE E: ONE-CLICK BULK BATCH DOSSIER (.ZIP) ARCHIVE EXPORTER
-# =====================================================================
-def compile_batch_dossiers_zip(results_list: List[Dict[str, Any]]) -> bytes:
-    """Compiles all Executive AOP PDFs, QPRFs, QMRFs, and IUCLID 6 XMLs into a single ZIP."""
-    import zipfile
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        for idx, res in enumerate(results_list):
-            clean_name = str(res.get("Resolved_Name", res.get("Input", f"Compound_{idx+1}"))).replace(" ", "_").replace("/", "_")
-            folder_prefix = f"Dossiers_{clean_name}"
-            
-            # Generate all 4 dossiers
-            try:
-                exec_pdf = generate_executive_aop_pdf(res)
-                zip_file.writestr(f"{folder_prefix}/Executive_AOP_Dossier_{clean_name}.pdf", exec_pdf)
-            except Exception:
-                pass
-
-            try:
-                qprf_pdf = generate_qprf_pdf(res)
-                zip_file.writestr(f"{folder_prefix}/OECD_497_QPRF_Dossier_{clean_name}.pdf", qprf_pdf)
-            except Exception:
-                pass
-
-            try:
-                qmrf_pdf = generate_qmrf_pdf(res)
-                zip_file.writestr(f"{folder_prefix}/OECD_QMRF_Model_Dossier_{clean_name}.pdf", qmrf_pdf)
-            except Exception:
-                pass
-
-            try:
-                iuclid_xml = generate_iuclid6_xml(res)
-                zip_file.writestr(f"{folder_prefix}/IUCLID6_7.4.1_{clean_name}.xml", iuclid_xml)
-            except Exception:
-                pass
-
-    zip_buffer.seek(0)
-    return zip_buffer.getvalue()
-
-
-class BayesianWoEEngine:
-    """
-    Computes rigorous Bayesian posterior probabilities of skin sensitization
-    according to OECD Guideline 497 Defined Approaches (2-out-of-3 & ITSv1/v2).
-    """
-    # Validated Assay Performance Characteristics (Sensitivity / Specificity)
-    ASSAY_STATS = {
-        "KE1_DPRA": {"sens": 0.80, "spec": 0.89},         # OECD TG 442C
-        "KE2_KeratinoSens": {"sens": 0.79, "spec": 0.72}, # OECD TG 442D
-        "KE3_hCLAT": {"sens": 0.85, "spec": 0.68},        # OECD TG 442E
-        "InSilico_GNN": {"sens": 0.91, "spec": 0.88}      # QSAR / ChemBERTa
-    }
-
-    @classmethod
-    def compute_posterior(cls, res: Dict[str, Any]) -> Dict[str, Any]:
-        # 1. Establish In Silico Ensemble Prior
-        prior_score = float(res.get("Transformer_Score", res.get("GNN_Score", 0.50)))
-        # Bound prior away from 0/1 to avoid numerical singularity
-        prior = max(0.02, min(0.98, prior_score))
-        prior_odds = prior / (1.0 - prior)
-
-        # 2. Sequential Evidence Updating via Likelihood Ratios
-        updates = []
-        current_odds = prior_odds
-
-        # Check assays
-        ke_map = [
-            ("KE1 (DPRA / Haptenation)", "KE1_DPRA", res.get("KE1_DPRA", 0.5)),
-            ("KE2 (KeratinoSens / ARE)", "KE2_KeratinoSens", res.get("KE2_KeratinoSens", 0.5)),
-            ("KE3 (h-CLAT / CD86)", "KE3_hCLAT", res.get("KE3_hCLAT", 0.5)),
-        ]
-
-        for label, key, score in ke_map:
-            stats = cls.ASSAY_STATS.get(key, {"sens": 0.80, "spec": 0.80})
-            is_pos = score >= 0.50
-            if is_pos:
-                lr = stats["sens"] / max(0.01, (1.0 - stats["spec"]))
-            else:
-                lr = (1.0 - stats["sens"]) / max(0.01, stats["spec"])
-
-            current_odds *= lr
-            step_prob = current_odds / (1.0 + current_odds)
-            updates.append({
-                "Key_Event": label,
-                "Observed_Call": "POSITIVE" if is_pos else "NEGATIVE",
-                "Score": round(score, 3),
-                "Likelihood_Ratio": round(lr, 2),
-                "Posterior_At_Step": round(step_prob, 4)
-            })
-
-        final_posterior = current_odds / (1.0 + current_odds)
-
-        # 3. Compute 95% Bayesian Credible Interval (Beta Approximation)
-        # Using effective sample size N_eff = 25 based on defined approach validation
-        n_eff = 25.0
-        alpha = 1.0 + final_posterior * n_eff
-        beta_param = 1.0 + (1.0 - final_posterior) * n_eff
-        
-        # Approximate 95% Credible Interval (+- 1.96 * SE)
-        variance = (alpha * beta_param) / (((alpha + beta_param) ** 2) * (alpha + beta_param + 1))
-        std_err = math.sqrt(variance)
-        ci_lower = max(0.001, round(final_posterior - 1.96 * std_err, 3))
-        ci_upper = min(0.999, round(final_posterior + 1.96 * std_err, 3))
-
-        # Qualitative WoE classification tier
-        if final_posterior >= 0.85:
-            woe_tier = "Definitive Sensitizer (High Probabilistic Certainty)"
-        elif final_posterior >= 0.60:
-            woe_tier = "Probable Sensitizer (Moderate Certainty)"
-        elif final_posterior >= 0.40:
-            woe_tier = "Borderline / Equivocal Domain"
-        elif final_posterior >= 0.15:
-            woe_tier = "Probable Non-Sensitizer (Moderate Certainty)"
-        else:
-            woe_tier = "Definitive Non-Sensitizer (High Probabilistic Certainty)"
-
-        return {
-            "Prior_Probability": round(prior, 3),
-            "Posterior_Probability": round(final_posterior, 4),
-            "Posterior_Percent": f"{round(final_posterior * 100, 1)}%",
-            "CI_95_Lower": ci_lower,
-            "CI_95_Upper": ci_upper,
-            "CI_95_Range": f"[{ci_lower:.3f}, {ci_upper:.3f}]",
-            "WoE_Classification": woe_tier,
-            "Sequential_Updates": updates
-        }
-
-
-
-def compute_dynamic_pca_projection(smiles_str: str, res_dict: dict = None):
-    import numpy as np
-    from rdkit import Chem
-    from rdkit.Chem import Descriptors, Lipinski, Crippen
-    
-    ref_smiles = [
-        "Clc1ccc(cc1[N+](=O)[O-])[N+](=O)[O-]",
-        "Oc1ccc(C=CC)cc1OC",
-        "OCC=Cc1ccccc1",
-        "CC1=CCC(CC1)C(=C)C",
-        "CC(=CCCC(C)(C=C)O)C",
-        "OCC(O)CO",
-        "CC(C)Cc1ccc(cc1)C(C)C(=O)O",
-        "CC(=O)Oc1ccccc1C(=O)O",
-        "c1ccccc1",
-        "Oc1ccccc1",
-        "c1ccc(cc1)N",
-        "CC(=O)NC1=CC=C(O)C=C1",
-        "ClCC#N",
-        "CCCCCCCC(=O)O",
-        "O=Cc1ccccc1",
-        "CCOC(=O)C",
-        "CN(C)C(=O)c1ccccc1",
-        "O=C1OCCO1",
-        "c1ccc2c(c1)cccc2",
-        "O=C(O)c1ccccc1"
-    ]
-    
-    def get_desc(s):
-        try:
-            m = Chem.MolFromSmiles(s)
-            if not m:
-                return None
-            return [
-                float(Descriptors.MolWt(m)),
-                float(Crippen.MolLogP(m)),
-                float(Descriptors.TPSA(m)),
-                float(Lipinski.NumHDonors(m)),
-                float(Lipinski.NumHAcceptors(m)),
-                float(Lipinski.NumRotatableBonds(m)),
-                float(Descriptors.FractionCSP3(m)),
-                float(Descriptors.HeavyAtomCount(m))
-            ]
-        except Exception:
-            return None
-
-    ref_feats = []
-    for s in ref_smiles:
-        d = get_desc(s)
-        if d is not None:
-            ref_feats.append(d)
-
-    if not ref_feats:
-        return np.zeros((len(ref_smiles), 2)), np.array([0.0, 0.0]), [0.55, 0.25]
-        
-    X_ref = np.array(ref_feats, dtype=float)
-    
-    q_desc = get_desc(smiles_str) if smiles_str else None
-    if q_desc is None and res_dict:
-        q_desc = [
-            float(res_dict.get('MolWt', 150.0)),
-            float(res_dict.get('LogP', 2.0)),
-            float(res_dict.get('TPSA', 40.0)),
-            float(res_dict.get('HBD', 1.0)),
-            float(res_dict.get('HBA', 2.0)),
-            float(res_dict.get('RotBonds', 3.0)),
-            0.35,
-            12.0
-        ]
-    elif q_desc is None:
-        q_desc = [150.0, 2.0, 40.0, 1.0, 2.0, 3.0, 0.35, 12.0]
-        
-    mean = np.mean(X_ref, axis=0)
-    std = np.std(X_ref, axis=0)
-    std[std == 0] = 1.0
-    
-    X_ref_scaled = (X_ref - mean) / std
-    X_q_scaled = (np.array(q_desc, dtype=float) - mean) / std
-    
-    U, S, Vt = np.linalg.svd(X_ref_scaled, full_matrices=False)
-    V_2d = Vt[:2, :].T
-    
-    ref_coords = np.dot(X_ref_scaled, V_2d)
-    q_coords = np.dot(X_q_scaled, V_2d)
-    
-    var_explained = (S**2) / np.sum(S**2)
-    return ref_coords, q_coords, var_explained[:2].tolist()
 
 
 def render_dashboard_cards(res: dict):
