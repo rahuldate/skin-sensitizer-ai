@@ -231,13 +231,13 @@ except ImportError:
 # STREAMLIT UI CONFIGURATION
 # =====================================================================
 st.set_page_config(
-
-st.markdown("""<style>div[data-testid="stMarkdownContainer"] p, .qprf-box, pre, code { color: #FFFFFF !important; }</style>""", unsafe_allow_html=True)
     page_title="SensAOP Studio",
     page_icon="🧪",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+st.markdown("""<style>div[data-testid="stMarkdownContainer"] p, .qprf-box, pre, code { color: #FFFFFF !important; }</style>""", unsafe_allow_html=True)
 
 st.title("🧪 SensAOP Studio")
 st.caption(
