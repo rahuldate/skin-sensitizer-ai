@@ -2739,11 +2739,37 @@ def render_dashboard_cards(res: dict):
         st.markdown(f"**Keap1 $\\Delta G_{{MM/PBSA}}$:** `{res.get('MD_MMPBSA_DeltaG', '-7.4 kcal/mol')}` ({res.get('MD_Stability', 'Stable Covalent Adduct')})")
     with col_mol2:
         if res.get("Heatmap_PNG"):
-            st.image(res["Heatmap_PNG"], caption="2D Chemical Structure & Atom Attribution", use_container_width=True)
-        elif res.get("Structure_Image"):
-            st.image(res["Structure_Image"], caption="2D Chemical Structure", use_container_width=True)
-        else:
-            st.info("Chemical Structure Preview")
+            # Robust 2D Chemical Structure Rendering Fallback
+            img_rendered = False
+            if res.get("Heatmap_PNG"):
+                try:
+                    st.image(res["Heatmap_PNG"], caption="2D Chemical Structure & Atom Attribution", use_container_width=True)
+                    img_rendered = True
+                except Exception:
+                    pass
+            if not img_rendered and res.get("Structure_Image"):
+                try:
+                    st.image(res["Structure_Image"], caption="2D Chemical Structure", use_container_width=True)
+                    img_rendered = True
+                except Exception:
+                    pass
+            if not img_rendered and res.get("SMILES"):
+                try:
+                    from rdkit import Chem
+                    from rdkit.Chem import Draw
+                    import io, base64
+                    mol = Chem.MolFromSmiles(res["SMILES"])
+                    if mol:
+                        img = Draw.MolToImage(mol, size=(350, 350))
+                        buffered = io.BytesIO()
+                        img.save(buffered, format="PNG")
+                        img_str = base64.b64encode(buffered.getvalue()).decode()
+                        st.image(f"data:image/png;base64,{img_str}", caption="2D Chemical Structure (RDKit Render)", use_container_width=True)
+                        img_rendered = True
+                except Exception:
+                    pass
+            if not img_rendered:
+                st.info("Chemical Structure Preview: No valid SMILES or image available.")
     with col_mol3:
         gnn_score_val = float(res.get("GNN_Score", 0.5))
         pca_plot_bytes = generate_chemical_space_pca_plot(gnn_score_val)
