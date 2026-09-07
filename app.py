@@ -385,7 +385,6 @@ class UniversalChemicalResolver:
         "13463-67-7": {"name": "Titanium dioxide", "smiles": "O=[Ti]=O", "cid": 26042, "exp_ec3": None, "exp_potency": "Non-Sensitizer (Insoluble)"},
         "1314-13-2": {"name": "Zinc oxide", "smiles": "O=[Zn]", "cid": 14806, "exp_ec3": None, "exp_potency": "Non-Sensitizer (Insoluble)"},
     }
-}
 
     HEADERS = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
