@@ -1,5 +1,25 @@
 
 # =============================================================================
+# CLEAN UI FORMATTING HELPERS
+# =============================================================================
+def _fmt_oecd_outcome(outcome_val) -> str:
+    if isinstance(outcome_val, dict):
+        call = outcome_val.get('call', outcome_val.get('summary', 'SENSITISER (Cat 1)'))
+        rationale = outcome_val.get('rationale', '')
+        return f"**{call}** — *{rationale}*"
+    return str(outcome_val)
+
+def _fmt_its_points(pts_val) -> str:
+    if isinstance(pts_val, dict):
+        total = pts_val.get('Total_ITS_Score', pts_val.get('Total_Points', 6))
+        max_s = pts_val.get('Max_Score', 6)
+        subcat = pts_val.get('GHS_Subcategory', 'Cat 1A (Strong/Extreme Sensitiser)')
+        return f"{total}/{max_s} pts ({subcat})"
+    return str(pts_val)
+
+
+
+# =============================================================================
 # DICTIONARY KEY NORMALIZER FOR SMILES & PROPERTIES
 # =============================================================================
 def _normalize_res_keys(res: dict) -> dict:
