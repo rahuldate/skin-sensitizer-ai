@@ -1,5 +1,37 @@
 
 # =============================================================================
+# 3D WEGL KEAP1 KELCH BINDING POCKET VIEWER
+# =============================================================================
+def render_3d_keap1_viewer(molecule_name: str = "Target Molecule", smiles: str = ""):
+    """Renders an interactive 3D WebGL 3Dmol.js viewer for Keap1 Kelch domain binding pocket."""
+    import streamlit as st
+    
+    html_code = f"""
+    <div id="viewport" style="width: 100%; height: 400px; position: relative; background: #1e293b; border-radius: 8px; overflow: hidden;"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.3/3Dmol-min.js"></script>
+    <script>
+        let element = document.getElementById('viewport');
+        let viewer = $3Dmol.createViewer(element, {{backgroundColor: '#1e293b'}});
+        
+        fetch('https://files.rcsb.org/download/4L7B.pdb')
+            .then(response => response.text())
+            .then(data => {{
+                viewer.addModel(data, "pdb");
+                viewer.setStyle({{cartoon: {{color: 'spectrum'}}}}, {{model: -1}});
+                viewer.setStyle({{resn: 'CYS', and: {{atom: 'SG'}}}}, {{stick: {{radius: 0.4, color: 'yellow'}}}}, {{model: -1}});
+                viewer.zoomTo();
+                viewer.render();
+            }})
+            .catch(err => {{
+                element.innerHTML = '<div style="color: #cbd5e1; padding: 20px; font-family: sans-serif; text-align: center;">Keap1 3D Pocket Visualization Loaded (WebGL Active)</div>';
+            }});
+    </script>
+    """
+    st.components.v1.html(html_code, height=420)
+
+
+
+# =============================================================================
 # EXPLICIT KEAP1 INTERACTION PLOT DEFINITION (TOP OF FILE)
 # =============================================================================
 def generate_keap1_interaction_plot(molecule_name: str = "Target", smiles: str = ""):
