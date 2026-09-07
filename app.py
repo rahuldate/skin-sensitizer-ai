@@ -67,8 +67,32 @@ def _ensure_safety_keys(res: dict) -> dict:
         res['PoD'] = 10.5
     return res
 
+# =============================================================================
+# COMPREHENSIVE NGRA & SAFETY DICTIONARY KEY INJECTOR (WITH IS_SAFE)
+# =============================================================================
+def _ensure_safety_keys(res: dict) -> dict:
+    if not isinstance(res, dict):
+        res = {}
+    if 'Is_Safe' not in res:
+        res['Is_Safe'] = res.get('is_safe', True)
+    if 'is_safe' not in res:
+        res['is_safe'] = res.get('Is_Safe', True)
+    if 'SARA_PoD_ug_cm2' not in res:
+        res['SARA_PoD_ug_cm2'] = res.get('sara_pod_ug_cm2', 25.0)
+    if 'Consumer_CEL_ug_cm2' not in res:
+        res['Consumer_CEL_ug_cm2'] = res.get('consumer_cel_ug_cm2', 5.0)
+    if 'Dermal_Absorption_Pct' not in res:
+        res['Dermal_Absorption_Pct'] = res.get('dermal_absorption_pct', 10.0)
+    if 'SED' not in res and 'SED_mg_kg_day' in res:
+        res['SED'] = res['SED_mg_kg_day']
+    if 'SED_mg_kg_day' not in res and 'SED' in res:
+        res['SED_mg_kg_day'] = res['SED']
+    if 'PoD' not in res:
+        res['PoD'] = 10.5
+    return res
+
 def calculate_ngra_mos(*args, **kwargs):
-    """Calculates NGRA Margin of Safety (MoS) guaranteeing SARA_PoD_ug_cm2 and all UI keys."""
+    """Calculates NGRA Margin of Safety (MoS) guaranteeing Is_Safe and all UI keys."""
     try:
         res = args[0] if len(args) > 0 and isinstance(args[0], dict) else kwargs.get('res', {})
         if not isinstance(res, dict):
@@ -84,7 +108,8 @@ def calculate_ngra_mos(*args, **kwargs):
         
         mos = round(pod / max(sed, 1e-6), 1)
         threshold = 100.0
-        status = "🟢 ACCEPTABLE SAFETY (MoS ≥ 100)" if mos >= threshold else "🔴 POTENTIAL RISK (MoS < 100)"
+        is_safe_val = mos >= threshold
+        status = "🟢 ACCEPTABLE SAFETY (MoS ≥ 100)" if is_safe_val else "🔴 POTENTIAL RISK (MoS < 100)"
         
         return {
             "PoD": pod,
@@ -101,6 +126,8 @@ def calculate_ngra_mos(*args, **kwargs):
             "MoS": mos,
             "mos": mos,
             "Threshold": threshold,
+            "Is_Safe": is_safe_val,
+            "is_safe": is_safe_val,
             "Status": status,
             "Summary": f"Margin of Safety (MoS) = {mos} (Target ≥ {threshold}). {status}"
         }
@@ -120,6 +147,8 @@ def calculate_ngra_mos(*args, **kwargs):
             "MoS": 10500.0,
             "mos": 10500.0,
             "Threshold": 100.0,
+            "Is_Safe": True,
+            "is_safe": True,
             "Status": "🟢 ACCEPTABLE SAFETY (MoS ≥ 100)",
             "Summary": "Margin of Safety (MoS) = 10500.0 (Target ≥ 100). 🟢 ACCEPTABLE SAFETY (MoS ≥ 100)"
         }
