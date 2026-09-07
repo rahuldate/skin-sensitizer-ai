@@ -93,3 +93,17 @@ class BayesianWoEEngine:
 # =============================================================================
 # BAYESIAN WEIGHT-OF-EVIDENCE (WoE) & READ-ACROSS ANALOGUES ENGINE
 # =============================================================================
+
+
+
+# =============================================================================
+# TOP-LEVEL STREAMLIT ERROR CATCHER
+# =============================================================================
+if __name__ == "__main__":
+    try:
+        pass
+    except Exception as _top_e:
+        import streamlit as st
+        st.error(f"Critical Application Error: {_top_e}")
+        import traceback
+        st.code(traceback.format_exc())
