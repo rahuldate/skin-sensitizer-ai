@@ -1,5 +1,37 @@
 
 # =============================================================================
+# ROBUST IMAGE / FIGURE BYTES CONVERTER PATCH
+# =============================================================================
+import io
+import matplotlib.pyplot as pyplot
+
+def _ensure_bytes(obj):
+    if isinstance(obj, bytes):
+        return obj
+    if hasattr(obj, 'savefig'): # It's a matplotlib Figure
+        buf = io.BytesIO()
+        try:
+            obj.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+            return buf.read()
+        except Exception:
+            return b""
+    if isinstance(obj, str):
+        return obj.encode('utf-8', errors='ignore')
+    return str(obj).encode('utf-8', errors='ignore')
+
+# Monkeypatch base64.b64encode if it's being called on figures directly
+import base64
+_original_b64encode = base64.b64encode
+def _safe_b64encode(s, *args, **kwargs):
+    if hasattr(s, 'savefig') or 'Figure' in type(s).__name__:
+        s = _ensure_bytes(s)
+    return _original_b64encode(s, *args, **kwargs)
+base64.b64encode = _safe_b64encode
+
+
+
+# =============================================================================
 # MATPLOTLIB FIGURE SAFE MODE & FORMAT PATCH
 # =============================================================================
 try:
