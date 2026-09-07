@@ -595,6 +595,7 @@ class MolecularDynamicsAgent:
                 "binding_mode": "None",
                 "hbond_occupancy": "0%"
 
+            }
         mw = chem.mw
         logp = chem.log_p
         rot_bonds = Lipinski.NumRotatableBonds(chem.mol) if chem.mol else 0
