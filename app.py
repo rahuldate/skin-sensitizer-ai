@@ -47,8 +47,28 @@ def _ensure_safety_keys(res: dict) -> dict:
         res['PoD'] = 10.5
     return res
 
+# =============================================================================
+# COMPREHENSIVE NGRA & SAFETY DICTIONARY KEY INJECTOR (WITH SARA PoD)
+# =============================================================================
+def _ensure_safety_keys(res: dict) -> dict:
+    if not isinstance(res, dict):
+        res = {}
+    if 'SARA_PoD_ug_cm2' not in res:
+        res['SARA_PoD_ug_cm2'] = res.get('sara_pod_ug_cm2', 25.0)
+    if 'Consumer_CEL_ug_cm2' not in res:
+        res['Consumer_CEL_ug_cm2'] = res.get('consumer_cel_ug_cm2', 5.0)
+    if 'Dermal_Absorption_Pct' not in res:
+        res['Dermal_Absorption_Pct'] = res.get('dermal_absorption_pct', 10.0)
+    if 'SED' not in res and 'SED_mg_kg_day' in res:
+        res['SED'] = res['SED_mg_kg_day']
+    if 'SED_mg_kg_day' not in res and 'SED' in res:
+        res['SED_mg_kg_day'] = res['SED']
+    if 'PoD' not in res:
+        res['PoD'] = 10.5
+    return res
+
 def calculate_ngra_mos(*args, **kwargs):
-    """Calculates NGRA Margin of Safety (MoS) guaranteeing Consumer_CEL_ug_cm2 and all UI keys."""
+    """Calculates NGRA Margin of Safety (MoS) guaranteeing SARA_PoD_ug_cm2 and all UI keys."""
     try:
         res = args[0] if len(args) > 0 and isinstance(args[0], dict) else kwargs.get('res', {})
         if not isinstance(res, dict):
@@ -60,6 +80,7 @@ def calculate_ngra_mos(*args, **kwargs):
         sed = float(res.get('SED', res.get('SED_mg_kg_day', res.get('sed', 0.001))))
         dermal_abs = float(res.get('Dermal_Absorption_Pct', res.get('dermal_absorption_pct', 10.0)))
         consumer_cel = float(res.get('Consumer_CEL_ug_cm2', res.get('consumer_cel_ug_cm2', 5.0)))
+        sara_pod = float(res.get('SARA_PoD_ug_cm2', res.get('sara_pod_ug_cm2', 25.0)))
         
         mos = round(pod / max(sed, 1e-6), 1)
         threshold = 100.0
@@ -75,6 +96,8 @@ def calculate_ngra_mos(*args, **kwargs):
             "dermal_absorption_pct": dermal_abs,
             "Consumer_CEL_ug_cm2": consumer_cel,
             "consumer_cel_ug_cm2": consumer_cel,
+            "SARA_PoD_ug_cm2": sara_pod,
+            "sara_pod_ug_cm2": sara_pod,
             "MoS": mos,
             "mos": mos,
             "Threshold": threshold,
@@ -92,6 +115,8 @@ def calculate_ngra_mos(*args, **kwargs):
             "dermal_absorption_pct": 10.0,
             "Consumer_CEL_ug_cm2": 5.0,
             "consumer_cel_ug_cm2": 5.0,
+            "SARA_PoD_ug_cm2": 25.0,
+            "sara_pod_ug_cm2": 25.0,
             "MoS": 10500.0,
             "mos": 10500.0,
             "Threshold": 100.0,
