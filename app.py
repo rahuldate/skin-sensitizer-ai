@@ -45,6 +45,7 @@ def evaluate_borderline_conflict(res: dict) -> dict:
             "title": "Scenario B: Real-World Human Potency / Moderate Exposure Tier",
             "potency": "GHS Category 1B (Moderate Sensitizer) or NC",
             "rationale": "Account for limited dermal penetration, physiological protein dilution, and high clinical NOEL in human patch tests."
+        },
     ]
 
     return {
@@ -1189,6 +1190,7 @@ def evaluate_borderline_conflict(res: dict) -> dict:
             "title": "Scenario B: Real-World Human Potency / Moderate Exposure Tier",
             "potency": "GHS Category 1B (Moderate Sensitizer) or NC",
             "rationale": "Account for limited dermal penetration, physiological protein dilution, and high clinical NOEL in human patch tests."
+        },
     ]
 
     return {
