@@ -1,5 +1,21 @@
 
 # =============================================================================
+# RENDER SAFETY & EXCEPTION CATCHER MONKEYPATCH
+# =============================================================================
+import traceback
+
+def _safe_render_wrapper(func_name, func_ref, *args, **kwargs):
+    try:
+        return func_ref(*args, **kwargs)
+    except Exception as e:
+        import streamlit as st
+        st.error(f"⚠️ Error rendering {{func_name}}: {{e}}")
+        with st.expander("🔍 Detailed Traceback"):
+            st.code(traceback.format_exc())
+
+
+
+# =============================================================================
 # DEFINITIVE BAYESIAN WEIGHT-OF-EVIDENCE (WoE) ENGINE
 # =============================================================================
 
