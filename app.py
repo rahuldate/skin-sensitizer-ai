@@ -2442,6 +2442,10 @@ def calculate_qmmm_covalent_kinetics(mol, smiles_str: str, mech_class: str = "Di
 # BAYESIAN WEIGHT-OF-EVIDENCE (WoE) INTEGRATION ENGINE
 # =============================================================================
 
+# =============================================================================
+# BAYESIAN WEIGHT-OF-EVIDENCE (WoE) INTEGRATION ENGINE
+# =============================================================================
+
 class BayesianWoEEngine:
     """Bayesian Weight-of-Evidence engine for integrating AOP Key Events, QSAR, and QM/MM kinetics."""
     def __init__(self, prior_probability: float = 0.5):
@@ -2451,13 +2455,16 @@ class BayesianWoEEngine:
         return self.run(res)
 
     def run(self, res: dict) -> dict:
+        return self.compute_posterior(res)
+
+    @staticmethod
+    def compute_posterior(res: dict, prior: float = 0.5) -> dict:
         ke1 = float(res.get("KE1_DPRA", 0.5))
         ke2 = float(res.get("KE2_KeratinoSens", 0.5))
         ke3 = float(res.get("KE3_hCLAT", 0.5))
         gnn = float(res.get("GNN_Score", 0.5))
         barrier = float(res.get("QMMM_Kinetics", {}).get("barrier_dG_act", 25.0))
         
-        # Bayesian likelihood weighting based on AOP concordance & activation barrier
         evidence_score = (ke1 + ke2 + ke3 + gnn) / 4.0
         if barrier <= 14.5:
             likelihood_ratio = 15.0
@@ -2466,8 +2473,7 @@ class BayesianWoEEngine:
         else:
             likelihood_ratio = 0.1
             
-        # Odds form of Bayes theorem
-        prior_odds = self.prior / (1.0 - self.prior + 1e-9)
+        prior_odds = prior / (1.0 - prior + 1e-9)
         posterior_odds = prior_odds * likelihood_ratio * (evidence_score + 0.1)
         posterior_prob = posterior_odds / (1.0 + posterior_odds)
         posterior_prob = min(0.999, max(0.001, posterior_prob))
@@ -2480,6 +2486,7 @@ class BayesianWoEEngine:
             "woe_call": call,
             "summary": f"Bayesian WoE Posterior Probability: {posterior_prob:.3f} (Likelihood Ratio: {likelihood_ratio:.1f})"
         }
+
 
 def evaluate_oecd497_decision_trees(res: Dict[str, Any]) -> Dict[str, Any]:
     """Evaluates OECD Guideline 497 Defined Approaches (2o3 DA and ITSv1/ITSv2)."""
