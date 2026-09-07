@@ -3794,7 +3794,7 @@ def render_dashboard_cards(res: dict):
         st.markdown(f"""
         <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
             <div style="color:#64748b; font-size:0.75rem; font-weight:600;">In Silico Prior P(H)</div>
-            <div style="color:#0f172a; font-size:1.05rem; font-weight:800;">{bayes_res['Prior_Probability']:.2f}</div>
+            <div style="color:#0f172a; font-size:1.05rem; font-weight:800;">{bayes_res.get('Prior_Probability', 0.5):.2f}</div>
             <div style="color:#475569; font-size:0.75rem;">ChemBERTa / GNN Prior</div>
         </div>
         """, unsafe_allow_html=True)
