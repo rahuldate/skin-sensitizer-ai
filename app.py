@@ -2431,25 +2431,25 @@ def generate_chemical_space_pca_plot(target_fp_val: float = 0.5) -> bytes:
     pc1_sens = np.random.normal(1.2, 0.9, n_samples // 2)
     pc2_sens = np.random.normal(0.8, 0.8, n_samples // 2)
 
-    fig, ax = plt.subplots(figsize=(6, 3.2), dpi=140)
+    fig, ax = plt.subplots(figsize=(9, 7), dpi=150)
     fig.patch.set_facecolor('#ffffff')
 
-    ax.scatter(pc1_non, pc2_non, color='#10b981', alpha=0.45, s=25, label='OECD Non-Sensitizers (NC)')
-    ax.scatter(pc1_sens, pc2_sens, color='#ef4444', alpha=0.45, s=25, label='OECD Sensitizers (Cat 1)')
+    ax.scatter(pc1_non, pc2_non, color='#10b981', alpha=0.45, s=45, label='OECD Non-Sensitizers (NC)')
+    ax.scatter(pc1_sens, pc2_sens, color='#ef4444', alpha=0.45, s=45, label='OECD Sensitizers (Cat 1)')
 
     t_pc1 = 1.0 if target_fp_val >= 0.5 else -1.2
     t_pc2 = 0.6 if target_fp_val >= 0.5 else -0.4
-    ax.scatter([t_pc1], [t_pc2], color='#0a1931', edgecolors='#f59e0b', s=140, lw=2, marker='*', label='Active Query Molecule', zorder=5)
+    ax.scatter([t_pc1], [t_pc2], color='#0a1931', edgecolors='#f59e0b', s=220, lw=2.5, marker='*', label='Active Query Molecule', zorder=5)
 
-    circle = plt.Circle((0, 0), 2.8, color='#3b82f6', fill=False, linestyle='--', lw=1.5, label='Applicability Domain Boundary (95% CI)')
+    circle = plt.Circle((0, 0), 2.8, color='#3b82f6', fill=False, linestyle='--', lw=2, label='Applicability Domain Boundary (95% CI)')
     ax.add_patch(circle)
 
-    ax.set_title('Chemical Space PCA & OECD Applicability Domain Projection', fontsize=8.5, fontweight='bold', color='#0f172a')
-    ax.set_xlabel('Principal Component 1 (Structural Variance)', fontsize=7.5)
-    ax.set_ylabel('Principal Component 2 (Physicochemical Space)', fontsize=7.5)
-    ax.legend(fontsize=6.5, loc='upper left', framealpha=0.9)
+    ax.set_title('Chemical Space PCA & OECD Applicability Domain Projection', fontsize=12, fontweight='bold', color='#0f172a')
+    ax.set_xlabel('Principal Component 1 (Structural Variance)', fontsize=10)
+    ax.set_ylabel('Principal Component 2 (Physicochemical Space)', fontsize=10)
+    ax.legend(fontsize=9, loc='upper left', framealpha=0.9)
     ax.grid(True, linestyle=':', alpha=0.5)
-    ax.tick_params(labelsize=6.5)
+    ax.tick_params(labelsize=9)
 
     plt.tight_layout()
     buf = io.BytesIO()
