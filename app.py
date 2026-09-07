@@ -1464,7 +1464,7 @@ def generate_executive_aop_pdf(res: Dict[str, Any]) -> bytes:
 
     
     if res.get("HITL_Override_Applied"):
-        story.append(Paragraph("<b>4. Expert Human-in-the-Loop (HITL) Regulatory Review</b>", sec_heading_style if "sec_heading_style" in locals() else ParagraphStyle('Heading', fontSize=12, leading=14, spaceAfter=6)))
+        story.append(Paragraph("<b>5. Expert Human-in-the-Loop (HITL) Regulatory Review</b>", sec_heading_style if "sec_heading_style" in locals() else ParagraphStyle('Heading', fontSize=12, leading=14, spaceAfter=6)))
         hitl_rows = [
             [Paragraph("<b>Status:</b>", cell_bold if "cell_bold" in locals() else ParagraphStyle('B', fontSize=9, fontName='Helvetica-Bold')), 
              Paragraph("Expert Potency Override & Borderline Resolution Applied", cell_norm if "cell_norm" in locals() else ParagraphStyle('N', fontSize=9))],
@@ -1580,7 +1580,7 @@ def generate_qprf_pdf(res: Dict[str, Any]) -> bytes:
 
     
     if res.get("HITL_Override_Applied"):
-        story.append(Paragraph("<b>4. Expert Human-in-the-Loop (HITL) Regulatory Review</b>", sec_heading_style if "sec_heading_style" in locals() else ParagraphStyle('Heading', fontSize=12, leading=14, spaceAfter=6)))
+        story.append(Paragraph("<b>5. Expert Human-in-the-Loop (HITL) Regulatory Review</b>", sec_heading_style if "sec_heading_style" in locals() else ParagraphStyle('Heading', fontSize=12, leading=14, spaceAfter=6)))
         hitl_rows = [
             [Paragraph("<b>Status:</b>", cell_bold if "cell_bold" in locals() else ParagraphStyle('B', fontSize=9, fontName='Helvetica-Bold')), 
              Paragraph("Expert Potency Override & Borderline Resolution Applied", cell_norm if "cell_norm" in locals() else ParagraphStyle('N', fontSize=9))],
