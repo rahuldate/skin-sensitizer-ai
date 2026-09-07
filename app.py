@@ -1,5 +1,19 @@
 
 # =============================================================================
+# MATPLOTLIB FIGURE SAFE MODE & FORMAT PATCH
+# =============================================================================
+try:
+    import matplotlib.figure
+    if not hasattr(matplotlib.figure.Figure, 'format'):
+        matplotlib.figure.Figure.format = lambda self, *args, **kwargs: "png"
+    if not hasattr(matplotlib.figure.Figure, 'mode'):
+        matplotlib.figure.Figure.mode = lambda self, *args, **kwargs: "layout"
+except Exception as e:
+    print(f"DEBUG Figure patch exception: {e}")
+
+
+
+# =============================================================================
 # MATPLOTLIB FIGURE SAFE FORMAT PATCH
 # =============================================================================
 try:
