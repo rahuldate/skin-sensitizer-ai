@@ -15,6 +15,7 @@ PRO_HAPTEN_PATTERNS = {
     "Glycol Ether Ester (Hydrolysis to Alkoxyethanol)": "[O;H0]-[C]-[C]-[O;H0]",
     "Autoxidizable Polyene/Diene": "[C]=[C]-[CH2]-[C]=[C]",
     "Pro-hapten Arylamine": "[c][NH2,NHR]"
+}
 
 def evaluate_borderline_conflict(res: dict) -> dict:
     smiles = res.get("SMILES", "")
