@@ -2594,6 +2594,10 @@ def generate_glp_digital_signature(*args, **kwargs) -> str:
 # CHEMICAL SPACE PCA PLOT GENERATOR
 # =============================================================================
 
+# =============================================================================
+# CHEMICAL SPACE PCA PLOT GENERATOR
+# =============================================================================
+
 def generate_chemical_space_pca_plot(*args, **kwargs):
     """Generates a chemical space PCA distribution plot comparing benchmark sensitizers against the target."""
     import matplotlib.pyplot as plt
@@ -2622,6 +2626,7 @@ def generate_chemical_space_pca_plot(*args, **kwargs):
         fig, ax = plt.subplots(figsize=(6, 4))
         ax.text(0.5, 0.5, "PCA Plot Generation Unavailable", horizontalalignment='center', verticalalignment='center')
         return fig
+
 
 def process_single_chemical(chem_input: str, api_key: str = "") -> Dict[str, Any]:
     """Complete end-to-end processing pipeline for a single chemical input."""
