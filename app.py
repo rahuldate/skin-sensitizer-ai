@@ -1,10 +1,6 @@
 
-<style>
-/* Ensure high contrast and visible white text inside QPRF report boxes and containers */
 div[data-testid="stMarkdownContainer"] div, .qprf-box, pre, code {
-    color: #FFFFFF !important;
 }
-</style>
 import streamlit as st
 import os
 import google.generativeai as genai
@@ -2520,7 +2516,6 @@ def render_3d_keap1_viewer(compound_name: str = "Compound", smiles: str = ""):
     <html>
     <head>
         <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
-        <style>
             .mol-container {{
                 width: 100%;
                 height: 420px;
@@ -2544,7 +2539,6 @@ def render_3d_keap1_viewer(compound_name: str = "Compound", smiles: str = ""):
                 z-index: 10;
                 pointer-events: none;
             }}
-        </style>
     </head>
     <body style="margin:0; padding:0; background: transparent;">
         <div id="container" class="mol-container">
@@ -3490,11 +3484,9 @@ with tab_sketch:
                 document.getElementById("smiles_output").value = jsmeApplet.smiles();
             }
         </script>
-        <style>
             body { font-family: sans-serif; margin: 0; padding: 5px; }
             button { background-color: #ff4b4b; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 8px; }
             input[type=text] { width: 95%; padding: 8px; margin-top: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; }
-        </style>
     </head>
     <body>
         <div id="jsme_container"></div>
