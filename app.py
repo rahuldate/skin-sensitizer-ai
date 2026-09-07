@@ -1,5 +1,27 @@
 
 # =============================================================================
+# STREAMLIT IMAGE & FIGURE RENDERING SAFETY PATCH
+# =============================================================================
+import streamlit as _st
+import io
+
+_orig_st_image = _st.image
+def _safe_st_image(image, *args, **kwargs):
+    if hasattr(image, 'savefig') or 'Figure' in type(image).__name__:
+        buf = io.BytesIO()
+        try:
+            image.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+            image = buf.read()
+        except Exception:
+            pass
+    return _orig_st_image(image, *args, **kwargs)
+
+_st.image = _safe_st_image
+
+
+
+# =============================================================================
 # BULLETPROOF BASE64 ENCODING PATCH FOR FIGURES
 # =============================================================================
 import base64
