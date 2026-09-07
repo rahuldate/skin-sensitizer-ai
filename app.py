@@ -1,5 +1,45 @@
 
 # =============================================================================
+# DICTIONARY KEY NORMALIZER FOR SMILES & PROPERTIES
+# =============================================================================
+def _normalize_res_keys(res: dict) -> dict:
+    if not isinstance(res, dict):
+        return res
+    if 'smiles' in res and 'SMILES' not in res:
+        res['SMILES'] = res['smiles']
+    if 'SMILES' in res and 'smiles' not in res:
+        res['smiles'] = res['SMILES']
+        
+    if 'mw' in res and 'MW' not in res:
+        res['MW'] = res['mw']
+    if 'MW' in res and 'mw' not in res:
+        res['mw'] = res['MW']
+        
+    if 'logp' in res and 'LogP' not in res:
+        res['LogP'] = res['logp']
+    if 'LogP' in res and 'logp' not in res:
+        res['logp'] = res['LogP']
+        
+    # Ensure structure image is present if SMILES is available
+    if not res.get('Structure_Image') and res.get('SMILES'):
+        try:
+            from rdkit import Chem
+            from rdkit.Chem import Draw
+            m = Chem.MolFromSmiles(res.get('SMILES'))
+            if m:
+                img = Draw.MolToImage(m, size=(300, 300))
+                import io
+                buf = io.BytesIO()
+                img.save(buf, format='PNG')
+                res['Structure_Image'] = buf.getvalue()
+        except Exception:
+            pass
+            
+    return res
+
+
+
+# =============================================================================
 # RDKIT STRUCTURE & SMILES RESOLUTION FIX
 # =============================================================================
 def _get_safe_molecule_data(identifier: str) -> dict:
