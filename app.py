@@ -2737,39 +2737,39 @@ def render_dashboard_cards(res: dict):
         st.markdown(f"**OECD Applicability Domain:** {ad_badge}")
         st.markdown(f"**Mahalanobis Distance Index ($D_M$):** `{res.get('Distance_Index', '0.18')}`")
         st.markdown(f"**Keap1 $\\Delta G_{{MM/PBSA}}$:** `{res.get('MD_MMPBSA_DeltaG', '-7.4 kcal/mol')}` ({res.get('MD_Stability', 'Stable Covalent Adduct')})")
-            with col_mol2:
-                st.markdown("### 🧪 Molecular Structure Preview")
-                img_rendered = False
-                smiles_val = res.get("SMILES", "")
-                if smiles_val and smiles_val != "N/A":
-                    try:
-                        from rdkit import Chem
-                        from rdkit.Chem import Draw
-                        import io, base64
-                        mol = Chem.MolFromSmiles(smiles_val)
-                        if mol:
-                            img = Draw.MolToImage(mol, size=(500, 500))
-                            buffered = io.BytesIO()
-                            img.save(buffered, format="PNG")
-                            img_str = base64.b64encode(buffered.getvalue()).decode()
-                            st.image(f"data:image/png;base64,{img_str}", caption=f"2D Structure: {res.get('Resolved_Name', 'Molecule')}", use_container_width=True)
-                            img_rendered = True
-                    except Exception as e:
-                        st.warning(f"RDKit Render Error: {e}")
-                if not img_rendered and res.get("Structure_Image"):
-                    try:
-                        st.image(res["Structure_Image"], caption="2D Chemical Structure", use_container_width=True)
+        with col_mol2:
+            st.markdown("### 🧪 Molecular Structure Preview")
+            img_rendered = False
+            smiles_val = res.get("SMILES", "")
+            if smiles_val and smiles_val != "N/A":
+                try:
+                    from rdkit import Chem
+                    from rdkit.Chem import Draw
+                    import io, base64
+                    mol = Chem.MolFromSmiles(smiles_val)
+                    if mol:
+                        img = Draw.MolToImage(mol, size=(500, 500))
+                        buffered = io.BytesIO()
+                        img.save(buffered, format="PNG")
+                        img_str = base64.b64encode(buffered.getvalue()).decode()
+                        st.image(f"data:image/png;base64,{img_str}", caption=f"2D Structure: {res.get('Resolved_Name', 'Molecule')}", use_container_width=True)
                         img_rendered = True
-                    except Exception:
-                        pass
-                if not img_rendered and res.get("Heatmap_PNG"):
-                    try:
-                        st.image(res["Heatmap_PNG"], caption="2D Chemical Structure & Atom Attribution", use_container_width=True)
-                        img_rendered = True
-                    except Exception:
-                        pass
-                if not img_rendered:
-                    st.info("Chemical Structure Preview: No valid SMILES available.")
+                except Exception as e:
+                    st.warning(f"RDKit Render Error: {e}")
+            if not img_rendered and res.get("Structure_Image"):
+                try:
+                    st.image(res["Structure_Image"], caption="2D Chemical Structure", use_container_width=True)
+                    img_rendered = True
+                except Exception:
+                    pass
+            if not img_rendered and res.get("Heatmap_PNG"):
+                try:
+                    st.image(res["Heatmap_PNG"], caption="2D Chemical Structure & Atom Attribution", use_container_width=True)
+                    img_rendered = True
+                except Exception:
+                    pass
+            if not img_rendered:
+                st.info("Chemical Structure Preview: No valid SMILES available.")
     with col_mol3:
         gnn_score_val = float(res.get("GNN_Score", 0.5))
         pca_plot_bytes = generate_chemical_space_pca_plot(gnn_score_val)
