@@ -412,6 +412,7 @@ class UniversalChemicalResolver:
                 "name": hit["name"],
                 "smiles": hit["smiles"],
                 "is_metal": UniversalChemicalResolver._is_metal_structure(hit["smiles"]),
+                }
 
         for k, v in UniversalChemicalResolver.STATIC_REGISTRY.items():
             if query.lower() == v["name"].lower():
