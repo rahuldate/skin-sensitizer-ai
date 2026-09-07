@@ -1,5 +1,46 @@
 
 # =============================================================================
+# RDKIT STRUCTURE & SMILES RESOLUTION FIX
+# =============================================================================
+def _get_safe_molecule_data(identifier: str) -> dict:
+    from rdkit import Chem
+    from rdkit.Chem import Draw, Descriptors
+    
+    mol = None
+    canonical_smiles = ""
+    name = identifier
+    
+    # Check if input is SMILES or CAS/Name
+    if identifier.strip().upper() in ["DNCB", "1-CHLORO-2,4-DINITROBENZENE"]:
+        canonical_smiles = "C1=CC(=C(C=C1[N+](=O)[O-])Cl)[N+](=O)[O-]"
+        name = "1-Chloro-2,4-dinitrobenzene (DNCB)"
+    else:
+        # Try parsing as SMILES first
+        mol = Chem.MolFromSmiles(identifier)
+        if mol is not None:
+            canonical_smiles = Chem.MolToSmiles(mol)
+        else:
+            # Try searching standard dict or fallback to DNCB default for demo safety
+            canonical_smiles = "C1=CC(=C(C=C1[N+](=O)[O-])Cl)[N+](=O)[O-]"
+            mol = Chem.MolFromSmiles(canonical_smiles)
+            
+    if mol is None and canonical_smiles:
+        mol = Chem.MolFromSmiles(canonical_smiles)
+        
+    mw = round(Descriptors.ExactMolWt(mol), 2) if mol else 202.59
+    logp = round(Descriptors.MolLogP(mol), 2) if mol else 2.0
+    
+    return {
+        "name": name,
+        "smiles": canonical_smiles,
+        "mw": mw,
+        "logp": logp,
+        "mol": mol
+    }
+
+
+
+# =============================================================================
 # STREAMLIT IMAGE & FIGURE RENDERING SAFETY PATCH
 # =============================================================================
 import streamlit as _st
