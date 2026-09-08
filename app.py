@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import pandas as pd
 import py_compile
+import streamlit.components.v1 as components
 
 PRO_HAPTEN_PATTERNS = {
     "Direct Michael Acceptor / Cinnamyl System": "[C,c]=[C]-[C]=O",
@@ -259,7 +260,7 @@ def main():
         st.info("Run analysis to unlock expert council reports and regulatory formats.")
 
     st.subheader("Module 1: Single Molecule & Canvas 2D Sketcher")
-    st.markdown("• **Universal Chemical Search**: Resolves CAS RN, chemical name, or SMILES across multi-tier caches, ACS Common Chemistry, and NIH PubChem.\n• **Embedded JSME 2D Canvas & Sketcher**: Draw novel chemical structures in-browser or enter SMILES.\n• **Automated Stereochemical Canonicalization & InChIKey Generation**: Standardizes structures and eliminates duplicates.")
+    st.markdown("• **Universal Chemical Search**: Resolves CAS RN, chemical name, or SMILES.\n• **Embedded JSME 2D Canvas**: Draw novel chemical structures in-browser interactively.\n• **Automated Stereochemical Canonicalization & InChIKey Generation**.")
     
     col_inp1, col_inp2 = st.columns([2, 1])
     with col_inp1:
@@ -267,10 +268,34 @@ def main():
     with col_inp2:
         scaffold_query = st.selectbox("Substructure / Scaffold Hopping Query Mode", ["None (Direct Target)", "Michael Acceptor Scaffold", "Benzylic Alcohol Scaffold", "Arylamine Scaffold"])
 
-    # JSME / Sketcher preview frame placeholder
-    with st.expander("🎨 Interactive JSME 2D Chemical Structure Sketcher"):
-        st.info("JSME canvas active: draw or edit your chemical pharmacophore below.")
-        sketcher_smiles = st.text_input("Sketcher Output SMILES / InChI", value=user_prompt)
+    # Embedded JSME 2D Chemical Structure Sketcher Component
+    with st.expander("🎨 Interactive JSME 2D Chemical Structure Sketcher", expanded=True):
+        jsme_html = """
+        <html>
+        <head>
+            <script type="text/javascript" language="javascript" src="https://peter-ertl.com/jsme/JSME_2017-02-26/jsme/jsme.nocache.js"></script>
+            <script type="text/javascript">
+                function jsmeOnLoad() {
+                    jsmeApplet = new JSME.Applet("jsme_container", "550px", "350px", {
+                        "options": "paste,smiles,query"
+                    });
+                    jsmeApplet.readSmiles("CCCCCCC=C(C=O)C1=CC=CC=C1");
+                    jsmeApplet.setCallBack("AtomClicked", updateSmiles);
+                    jsmeApplet.setCallBack("AfterStructureModified", updateSmiles);
+                }
+                function updateSmiles() {
+                    var smi = jsmeApplet.smiles();
+                    parent.postMessage({type: 'jsme_smiles', smiles: smi}, '*');
+                }
+            </script>
+        </head>
+        <body style="margin:0; background-color:#0e1117;">
+            <div id="jsme_container"></div>
+        </body>
+        </html>
+        """
+        components.html(jsme_html, height=380)
+        sketcher_smiles = st.text_input("Synchronized Sketcher SMILES", value=user_prompt)
         if sketcher_smiles != user_prompt:
             user_prompt = sketcher_smiles
 
@@ -286,7 +311,6 @@ def main():
         st.session_state["last_sara"] = sara_res
         st.session_state["last_smiles"] = user_prompt
         
-        # Display Canonicalization & Descriptors if valid
         if rdkit_res.get("valid"):
             st.success(f"**Canonical SMILES**: `{rdkit_res['canonical_smiles']}` | **InChIKey**: `{rdkit_res['inchikey']}`")
             col_d1, col_d2, col_d3 = st.columns(3)
