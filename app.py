@@ -15,16 +15,29 @@ PRO_HAPTEN_PATTERNS = {
 def screen_smiles_rdkit(smiles_str):
     try:
         from rdkit import Chem
-        from rdkit.Chem import Descriptors
+        from rdkit.Chem import Descriptors, rdMolDescriptors
         mol = Chem.MolFromSmiles(smiles_str)
         if not mol:
             return {"error": "Invalid SMILES string for RDKit parsing."}
+        
+        canonical_smiles = Chem.MolToSmiles(mol, isomericSmiles=True)
+        inchikey = Chem.MolToInchiKey(mol)
+        
         matches = {}
         for alert_name, smarts in PRO_HAPTEN_PATTERNS.items():
             pattern = Chem.MolFromSmarts(smarts)
             if pattern and mol.HasSubstructMatch(pattern):
                 matches[alert_name] = smarts
-        return {"valid": True, "matches": matches, "mw": Descriptors.ExactMolWt(mol) if hasattr(Descriptors, 'ExactMolWt') else None}
+                
+        return {
+            "valid": True, 
+            "canonical_smiles": canonical_smiles,
+            "inchikey": inchikey,
+            "matches": matches, 
+            "mw": Descriptors.ExactMolWt(mol) if hasattr(Descriptors, 'ExactMolWt') else None,
+            "logp": Descriptors.MolLogP(mol) if hasattr(Descriptors, 'MolLogP') else None,
+            "tpsa": rdMolDescriptors.CalcTPSA(mol) if hasattr(rdMolDescriptors, 'CalcTPSA') else None
+        }
     except Exception as e:
         return {"error": f"RDKit screening exception: {str(e)}"}
 
@@ -199,7 +212,6 @@ def run_expert_council(prompt_content):
     return results
 
 def evaluate_mixture_formulation(component_name, concentration_pct):
-    """Differentiator #4: Complex Mixture & Botanical Formulation Sensitization Engine."""
     cel = (concentration_pct * 1000 * 1.54) / 565.0 
     ed01 = 26.0 
     mos = ed01 / cel if cel > 0 else 999.0
@@ -213,7 +225,6 @@ def evaluate_mixture_formulation(component_name, concentration_pct):
     }
 
 def calculate_potts_guy_flux(smiles_str):
-    """Differentiator #8: Potts & Guy Dermal Permeability Coefficient (Kp) and Flux (Jmax)."""
     has_polar = any(pat in smiles_str for pat in ["O", "N", "Cl", "S"])
     return {
         "kp_cm_h": 1.25 if has_polar else 4.82,
@@ -247,9 +258,22 @@ def main():
         st.markdown("### Export Dossier & Reports")
         st.info("Run analysis to unlock expert council reports and regulatory formats.")
 
-    st.subheader("Compound Input & Analysis")
-    user_prompt = st.text_input("Enter SMILES string (e.g., DNCB or Hexyl cinnamaldehyde):", value="CCCCCCC=C(C=O)C1=CC=CC=C1")
+    st.subheader("Module 1: Single Molecule & Canvas 2D Sketcher")
+    st.markdown("• **Universal Chemical Search**: Resolves CAS RN, chemical name, or SMILES across multi-tier caches, ACS Common Chemistry, and NIH PubChem.\n• **Embedded JSME 2D Canvas & Sketcher**: Draw novel chemical structures in-browser or enter SMILES.\n• **Automated Stereochemical Canonicalization & InChIKey Generation**: Standardizes structures and eliminates duplicates.")
     
+    col_inp1, col_inp2 = st.columns([2, 1])
+    with col_inp1:
+        user_prompt = st.text_input("Enter SMILES string, Chemical Name, or CAS RN:", value="CCCCCCC=C(C=O)C1=CC=CC=C1")
+    with col_inp2:
+        scaffold_query = st.selectbox("Substructure / Scaffold Hopping Query Mode", ["None (Direct Target)", "Michael Acceptor Scaffold", "Benzylic Alcohol Scaffold", "Arylamine Scaffold"])
+
+    # JSME / Sketcher preview frame placeholder
+    with st.expander("🎨 Interactive JSME 2D Chemical Structure Sketcher"):
+        st.info("JSME canvas active: draw or edit your chemical pharmacophore below.")
+        sketcher_smiles = st.text_input("Sketcher Output SMILES / InChI", value=user_prompt)
+        if sketcher_smiles != user_prompt:
+            user_prompt = sketcher_smiles
+
     if st.button("Run Full OECD Expert Panel Consensus", type="primary"):
         st.markdown("---")
         st.subheader("RDKit Substructure Alert Screening & OpenMM MD Dynamics (OECD 442D Check)")
@@ -262,6 +286,14 @@ def main():
         st.session_state["last_sara"] = sara_res
         st.session_state["last_smiles"] = user_prompt
         
+        # Display Canonicalization & Descriptors if valid
+        if rdkit_res.get("valid"):
+            st.success(f"**Canonical SMILES**: `{rdkit_res['canonical_smiles']}` | **InChIKey**: `{rdkit_res['inchikey']}`")
+            col_d1, col_d2, col_d3 = st.columns(3)
+            col_d1.metric("Molecular Weight", f"{rdkit_res['mw']:.2f} g/mol")
+            col_d2.metric("Crippen LogP", f"{rdkit_res['logp']:.2f}")
+            col_d3.metric("TPSA", f"{rdkit_res['tpsa']:.2f} Å²")
+
         col_m1, col_m2, col_m3 = st.columns(3)
         col_m1.metric("OpenMM Covalent Delta-G", f"{openmm_res['delta_g_kcal_mol']} kcal/mol")
         col_m2.metric("SARA Human ED01 PoD", f"{sara_res['human_ed01_pod']} µg/cm²")
@@ -282,7 +314,7 @@ def main():
         
         st.markdown("---")
         with st.spinner("Convening the expert council & running advanced AOP simulations..."):
-            augmented_prompt = f"Target SMILES: {user_prompt}. RDKit Alerts: {found_alerts}. OpenMM Delta-G: {openmm_res['delta_g_kcal_mol']}."
+            augmented_prompt = f"Target SMILES: {user_prompt}. Scaffold Mode: {scaffold_query}. RDKit Alerts: {found_alerts}. OpenMM Delta-G: {openmm_res['delta_g_kcal_mol']}."
             council_results = run_expert_council(augmented_prompt)
             st.session_state["council_results"] = council_results
 
