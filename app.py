@@ -346,7 +346,7 @@ def main():
             st.success(f"**Formulation Status**: {mix_res['status']}")
 
         with tabs[len(council_results) + 2]:
-            st.markdown("### 💧 Real-Time Skin Bioavailability & Potts-Guy Flux ($Kp$ & $J_{max}$)")
+            st.markdown("### 💧 Real-Time Skin Bioavailability & Potts-Guy Flux (Kp & Jmax)")
             flux_res = calculate_potts_guy_flux(user_prompt)
             col_fl1, col_fl2, col_fl3 = st.columns(3)
             
