@@ -349,9 +349,30 @@ def main():
             st.markdown("### 💧 Real-Time Skin Bioavailability & Potts-Guy Flux ($Kp$ & $J_{max}$)")
             flux_res = calculate_potts_guy_flux(user_prompt)
             col_fl1, col_fl2, col_fl3 = st.columns(3)
-            col_fl1.metric("Permeability Coefficient ($Kp$)", f"{flux_res['kp_cm_h']}")
-            col_fl2.metric("Max Steady-State Flux ($J_{max}$)", f"{flux_res['jmax_ug_cm2_h']}")
-            col_fl3.metric("Stratum Corneum Barrier", flux_res['barrier_status'])
+            
+            with col_fl1:
+                st.markdown(f"""
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; text-align: center; height: 110px;">
+                    <div style="font-size: 14px; color: #6c757d; font-weight: 600;">Permeability Coeff ($Kp$)</div>
+                    <div style="font-size: 22px; color: #212529; font-weight: bold; margin-top: 10px;">{{flux_res['kp_cm_h']}}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            with col_fl2:
+                st.markdown(f"""
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; text-align: center; height: 110px;">
+                    <div style="font-size: 14px; color: #6c757d; font-weight: 600;">Max Steady-State Flux ($J_{max}$)</div>
+                    <div style="font-size: 22px; color: #212529; font-weight: bold; margin-top: 10px;">{{flux_res['jmax_ug_cm2_h']}}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            with col_fl3:
+                st.markdown(f"""
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; text-align: center; height: 110px;">
+                    <div style="font-size: 14px; color: #6c757d; font-weight: 600;">Stratum Corneum Barrier</div>
+                    <div style="font-size: 16px; color: #212529; font-weight: bold; margin-top: 12px; line-height: 1.2;">{{flux_res['barrier_status']}}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
         with tabs[len(council_results) + 3]:
             st.markdown("### 📑 Official Regulatory Dossier Formats (IUCLID 6, QMRF & QPRF)")
