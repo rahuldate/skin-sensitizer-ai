@@ -260,44 +260,34 @@ def main():
         st.info("Run analysis to unlock expert council reports and regulatory formats.")
 
     st.subheader("Module 1: Single Molecule & Canvas 2D Sketcher")
-    st.markdown("• **Universal Chemical Search**: Resolves CAS RN, chemical name, or SMILES.\n• **Embedded JSME 2D Canvas**: Draw novel chemical structures in-browser interactively.\n• **Automated Stereochemical Canonicalization & InChIKey Generation**.")
+    st.markdown("• **Universal Chemical Search**: Resolves CAS RN, chemical name, or SMILES.\n• **Interactive Structure Input & Preset Library**: Select benchmark reference sensitizers or input custom SMILES.\n• **Automated Stereochemical Canonicalization & InChIKey Generation**.")
     
     col_inp1, col_inp2 = st.columns([2, 1])
     with col_inp1:
-        user_prompt = st.text_input("Enter SMILES string, Chemical Name, or CAS RN:", value="CCCCCCC=C(C=O)C1=CC=CC=C1")
+        preset_choice = st.selectbox("Quick Benchmark Reference Selector", [
+            "Custom SMILES / Drawn Input",
+            "alpha-Hexylcinnamaldehyde (CAS: 101-86-0)",
+            "2,4-Dinitrochlorobenzene [DNCB] (CAS: 97-28-9)",
+            "Cinnamaldehyde (CAS: 104-55-2)",
+            "Isoeugenol (CAS: 97-54-1)",
+            "Salicylic Acid [Non-Sensitizer] (CAS: 69-72-7)"
+        ])
+        
+        default_smi = "CCCCCCC=C(C=O)C1=CC=CC=C1"
+        if "Hexylcinnamaldehyde" in preset_choice:
+            default_smi = "CCCCCCC=C(C=O)C1=CC=CC=C1"
+        elif "DNCB" in preset_choice:
+            default_smi = "c1cc(c(cc1[N+](=O)[O-])[N+](=O)[O-])Cl"
+        elif "Cinnamaldehyde" in preset_choice:
+            default_smi = "O=CC=Cc1ccccc1"
+        elif "Isoeugenol" in preset_choice:
+            default_smi = "COc1cc(cc(c1)O)/C=C/C"
+        elif "Salicylic" in preset_choice:
+            default_smi = "O=C(O)c1ccccc1O"
+
+        user_prompt = st.text_input("Target SMILES string:", value=default_smi)
     with col_inp2:
         scaffold_query = st.selectbox("Substructure / Scaffold Hopping Query Mode", ["None (Direct Target)", "Michael Acceptor Scaffold", "Benzylic Alcohol Scaffold", "Arylamine Scaffold"])
-
-    # Embedded JSME 2D Chemical Structure Sketcher Component
-    with st.expander("🎨 Interactive JSME 2D Chemical Structure Sketcher", expanded=True):
-        jsme_html = """
-        <html>
-        <head>
-            <script type="text/javascript" language="javascript" src="https://peter-ertl.com/jsme/JSME_2017-02-26/jsme/jsme.nocache.js"></script>
-            <script type="text/javascript">
-                function jsmeOnLoad() {
-                    jsmeApplet = new JSME.Applet("jsme_container", "550px", "350px", {
-                        "options": "paste,smiles,query"
-                    });
-                    jsmeApplet.readSmiles("CCCCCCC=C(C=O)C1=CC=CC=C1");
-                    jsmeApplet.setCallBack("AtomClicked", updateSmiles);
-                    jsmeApplet.setCallBack("AfterStructureModified", updateSmiles);
-                }
-                function updateSmiles() {
-                    var smi = jsmeApplet.smiles();
-                    parent.postMessage({type: 'jsme_smiles', smiles: smi}, '*');
-                }
-            </script>
-        </head>
-        <body style="margin:0; background-color:#0e1117;">
-            <div id="jsme_container"></div>
-        </body>
-        </html>
-        """
-        components.html(jsme_html, height=380)
-        sketcher_smiles = st.text_input("Synchronized Sketcher SMILES", value=user_prompt)
-        if sketcher_smiles != user_prompt:
-            user_prompt = sketcher_smiles
 
     if st.button("Run Full OECD Expert Panel Consensus", type="primary"):
         st.markdown("---")
