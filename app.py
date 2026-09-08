@@ -265,9 +265,10 @@ def main():
                 st.error(f"Error reading CSV: {e}")
 
     st.subheader("Module 1: Single Molecule & Canvas 2D Sketcher")
-    user_prompt = st.text_input("Target SMILES string:", value="CCCCCCC=C(C=O)C1=CC=CC=C1")
+    user_prompt = st.text_input("Target SMILES string:", value=st.session_state.get("last_smiles", "CCCCCCC=C(C=O)C1=CC=CC=C1"))
 
-    if st.button("Run Full OECD Expert Panel Consensus", type="primary"):
+    if st.button("Run Full OECD Expert Panel Consensus", type="primary") or st.session_state.get("has_run", False):
+        st.session_state["has_run"] = True
         rdkit_res = screen_smiles_rdkit(user_prompt)
         openmm_res = simulate_openmm_dynamics(user_prompt)
         sara_res = calculate_sara_ice_metrics(user_prompt)
@@ -298,69 +299,70 @@ def main():
             st.success("✅ No predefined pro-hapten structural alerts matched.")
         
         st.markdown("---")
-        with st.spinner("Convening the expert council & running advanced AOP simulations..."):
-            augmented_prompt = f"Target SMILES: {user_prompt}. RDKit Alerts: {found_alerts}. OpenMM Delta-G: {openmm_res['delta_g_kcal_mol']}."
-            council_results = run_expert_council(augmented_prompt)
-            st.session_state["council_results"] = council_results
+        if "council_results" not in st.session_state:
+            with st.spinner("Convening the expert council & running advanced AOP simulations..."):
+                augmented_prompt = f"Target SMILES: {user_prompt}. RDKit Alerts: {found_alerts}. OpenMM Delta-G: {openmm_res['delta_g_kcal_mol']}."
+                st.session_state["council_results"] = run_expert_council(augmented_prompt)
 
-            tab_names = list(council_results.keys()) + ["Read-Across Matrix", "Mixture & MoS Engine", "Potts & Guy Flux", "Regulatory Dossier Formats", "HITL Adjudication"]
-            tabs = st.tabs(tab_names)
-            
-            for i, agent in enumerate(council_results.keys()):
-                with tabs[i]:
-                    st.markdown(f"### {agent} Assessment")
-                    st.write(council_results[agent])
-            
-            with tabs[len(council_results)]:
-                st.markdown("### 📊 Read-Across Analog Search Matrix & Tanimoto Similarity")
-                analogs = get_read_across_analog_matrix(user_prompt)
-                st.dataframe(pd.DataFrame(analogs), use_container_width=True)
+        council_results = st.session_state["council_results"]
+        tab_names = list(council_results.keys()) + ["Read-Across Matrix", "Mixture & MoS Engine", "Potts & Guy Flux", "Regulatory Dossier Formats", "HITL Adjudication"]
+        tabs = st.tabs(tab_names)
+        
+        for i, agent in enumerate(council_results.keys()):
+            with tabs[i]:
+                st.markdown(f"### {agent} Assessment")
+                st.write(council_results[agent])
+        
+        with tabs[len(council_results)]:
+            st.markdown("### 📊 Read-Across Analog Search Matrix & Tanimoto Similarity")
+            analogs = get_read_across_analog_matrix(user_prompt)
+            st.dataframe(pd.DataFrame(analogs), use_container_width=True)
 
-            with tabs[len(council_results) + 1]:
-                st.markdown("### 🌿 Complex Mixture & Botanical Formulation Sensitization Engine")
-                mix_conc = st.slider("Active Ingredient Incorporation Concentration (% w/w)", 0.01, 5.0, 0.5, 0.01, key="mix_slider_d4")
-                mix_res = evaluate_mixture_formulation("Target Formulation Component", mix_conc)
-                col_mx1, col_mx2, col_mx3 = st.columns(3)
-                col_mx1.metric("Consumer Exposure Level (CEL)", f"{mix_res['cel_ug_cm2']} µg/cm²")
-                col_mx2.metric("Calculated Margin of Safety", f"{mix_res['mos']}")
-                col_mx3.metric("Safety Threshold Check", "Pass (>= 100)" if mix_res['mos'] >= 100 else "Fail (< 100)")
-                st.success(f"**Formulation Status**: {mix_res['status']}")
+        with tabs[len(council_results) + 1]:
+            st.markdown("### 🌿 Complex Mixture & Botanical Formulation Sensitization Engine")
+            mix_conc = st.slider("Active Ingredient Incorporation Concentration (% w/w)", 0.01, 5.0, 0.5, 0.01, key="mix_slider_d4")
+            mix_res = evaluate_mixture_formulation("Target Formulation Component", mix_conc)
+            col_mx1, col_mx2, col_mx3 = st.columns(3)
+            col_mx1.metric("Consumer Exposure Level (CEL)", f"{mix_res['cel_ug_cm2']} µg/cm²")
+            col_mx2.metric("Calculated Margin of Safety", f"{mix_res['mos']}")
+            col_mx3.metric("Safety Threshold Check", "Pass (>= 100)" if mix_res['mos'] >= 100 else "Fail (< 100)")
+            st.success(f"**Formulation Status**: {mix_res['status']}")
 
-            with tabs[len(council_results) + 2]:
-                st.markdown("### 💧 Real-Time Skin Bioavailability & Potts-Guy Flux ($Kp$ & $J_{max}$)")
-                flux_res = calculate_potts_guy_flux(user_prompt)
-                col_fl1, col_fl2, col_fl3 = st.columns(3)
-                col_fl1.metric("Permeability Coefficient ($Kp$)", f"{flux_res['kp_cm_h']} cm/h")
-                col_fl2.metric("Max Steady-State Flux ($J_{max}$)", f"{flux_res['jmax_ug_cm2_h']} µg/cm²h")
-                col_fl3.metric("Stratum Corneum Barrier", flux_res['barrier_status'])
+        with tabs[len(council_results) + 2]:
+            st.markdown("### 💧 Real-Time Skin Bioavailability & Potts-Guy Flux ($Kp$ & $J_{max}$)")
+            flux_res = calculate_potts_guy_flux(user_prompt)
+            col_fl1, col_fl2, col_fl3 = st.columns(3)
+            col_fl1.metric("Permeability Coefficient ($Kp$)", f"{flux_res['kp_cm_h']} cm/h")
+            col_fl2.metric("Max Steady-State Flux ($J_{max}$)", f"{flux_res['jmax_ug_cm2_h']} µg/cm²h")
+            col_fl3.metric("Stratum Corneum Barrier", flux_res['barrier_status'])
 
-            with tabs[len(council_results) + 3]:
-                st.markdown("### 📑 Official Regulatory Dossier Formats (IUCLID 6, QMRF & QPRF)")
-                hazard_call = "SENSITIZER (GHS Category 1B Moderate)" if found_alerts else "NON-SENSITIZER"
-                report_choice = st.selectbox("Select Regulatory Export Format", ["IUCLID 6 REACH XML", "OECD QMRF Report", "OECD QPRF Report", "Executive AOP Summary PDF/Text"], key="format_selectbox")
-                if report_choice == "IUCLID 6 REACH XML":
-                    xml_content = generate_iuclid6_xml(user_prompt, hazard_call, "0.857")
-                    st.code(xml_content, language="xml")
-                    st.download_button("Download IUCLID 6 XML Dossier", data=xml_content.encode('utf-8'), file_name="IUCLID6_Dossier.xml", mime="application/xml")
-                elif report_choice == "OECD QMRF Report":
-                    qmrf_content = generate_oecd_qmrf_report(user_prompt, hazard_call)
-                    st.code(qmrf_content, language="text")
-                    st.download_button("Download OECD QMRF Report", data=qmrf_content.encode('utf-8'), file_name="OECD_QMRF_Report.txt", mime="text/plain")
-                elif report_choice == "OECD QPRF Report":
-                    qprf_content = generate_oecd_qprf_report(user_prompt, hazard_call, sara_res)
-                    st.code(qprf_content, language="text")
-                    st.download_button("Download OECD QPRF Report", data=qprf_content.encode('utf-8'), file_name="OECD_QPRF_Report.txt", mime="text/plain")
-                else:
-                    exec_content = f"EXECUTIVE IN SILICO AOP SAFETY DOSSIER\nTarget: {user_prompt}\nClassification: {hazard_call}"
-                    st.code(exec_content, language="text")
-                    st.download_button("Download Executive AOP Dossier", data=exec_content.encode('utf-8'), file_name="Executive_AOP_Dossier.txt", mime="text/plain")
+        with tabs[len(council_results) + 3]:
+            st.markdown("### 📑 Official Regulatory Dossier Formats (IUCLID 6, QMRF & QPRF)")
+            hazard_call = "SENSITIZER (GHS Category 1B Moderate)" if found_alerts else "NON-SENSITIZER"
+            report_choice = st.selectbox("Select Regulatory Export Format", ["IUCLID 6 REACH XML", "OECD QMRF Report", "OECD QPRF Report", "Executive AOP Summary PDF/Text"], key="format_selectbox_persistent")
+            if report_choice == "IUCLID 6 REACH XML":
+                xml_content = generate_iuclid6_xml(user_prompt, hazard_call, "0.857")
+                st.code(xml_content, language="xml")
+                st.download_button("Download IUCLID 6 XML Dossier", data=xml_content.encode('utf-8'), file_name="IUCLID6_Dossier.xml", mime="application/xml", key="dl_iuclid_btn")
+            elif report_choice == "OECD QMRF Report":
+                qmrf_content = generate_oecd_qmrf_report(user_prompt, hazard_call)
+                st.code(qmrf_content, language="text")
+                st.download_button("Download OECD QMRF Report", data=qmrf_content.encode('utf-8'), file_name="OECD_QMRF_Report.txt", mime="text/plain", key="dl_qmrf_btn")
+            elif report_choice == "OECD QPRF Report":
+                qprf_content = generate_oecd_qprf_report(user_prompt, hazard_call, sara_res)
+                st.code(qprf_content, language="text")
+                st.download_button("Download OECD QPRF Report", data=qprf_content.encode('utf-8'), file_name="OECD_QPRF_Report.txt", mime="text/plain", key="dl_qprf_btn")
+            else:
+                exec_content = f"EXECUTIVE IN SILICO AOP SAFETY DOSSIER\nTarget: {user_prompt}\nClassification: {hazard_call}"
+                st.code(exec_content, language="text")
+                st.download_button("Download Executive AOP Dossier", data=exec_content.encode('utf-8'), file_name="Executive_AOP_Dossier.txt", mime="text/plain", key="dl_exec_btn")
 
-            with tabs[len(council_results) + 4]:
-                st.markdown("### 🧑‍⚖️ Human-in-the-Loop (HITL) Regulatory Review & Adjudication")
-                hitl_status = st.selectbox("Adjudication Status", ["Accept Automated Default (GHS Category 1B Moderate)", "Expert Potency Override (Category 1A Strong)", "Non-Sensitizer Reclassification"])
-                st.text_area("Regulatory Justification & Clinical Patch Data Reference", value="Conservative in silico screening call reviewed; clinical human patch data indicates moderate potency.")
-                if st.button("Save HITL Adjudication Sign-Off"):
-                    st.success(f"Successfully recorded expert review sign-off: {hitl_status}")
+        with tabs[len(council_results) + 4]:
+            st.markdown("### 🧑‍⚖️ Human-in-the-Loop (HITL) Regulatory Review & Adjudication")
+            hitl_status = st.selectbox("Adjudication Status", ["Accept Automated Default (GHS Category 1B Moderate)", "Expert Potency Override (Category 1A Strong)", "Non-Sensitizer Reclassification"], key="hitl_status_persistent")
+            st.text_area("Regulatory Justification & Clinical Patch Data Reference", value="Conservative in silico screening call reviewed; clinical human patch data indicates moderate potency.", key="hitl_text_persistent")
+            if st.button("Save HITL Adjudication Sign-Off", key="save_hitl_persistent"):
+                st.success(f"Successfully recorded expert review sign-off: {hitl_status}")
 
     if "batch_data" in st.session_state:
         st.markdown("---")
